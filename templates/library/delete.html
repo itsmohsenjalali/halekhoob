@@ -1,0 +1,3 @@
+{% extends 'base.html' %}
+{% block title %}حذف ویدیو{% endblock %}
+{% block content %}<section class="narrow"><h1>این ویدیو حذف شود؟</h1><p class="lede">«{{ video.display_title }}» همراه فایل، یادداشت و برچسب‌هایش از آرشیو پاک می‌شود. بازیابی از داخل سایت ممکن نیست.</p><form method="post" class="form-actions">{% csrf_token %}<button class="button danger" type="submit">حذف ویدیو</button><a class="button" href="{% url 'detail' video.pk %}">نگهش دار</a></form></section>{% endblock %}

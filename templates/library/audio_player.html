@@ -1,0 +1,11 @@
+<section class="audio-player" data-audio-player hidden aria-label="پخش صوتی پیوسته">
+  <audio data-playlist-audio preload="metadata"></audio>
+  <div class="audio-description"><p class="small muted" data-audio-collection></p><strong data-audio-title></strong><p class="small muted" data-audio-status role="status" aria-live="polite"></p></div>
+  <div class="audio-controls">
+    <button type="button" class="post-action" data-audio-previous aria-label="صدای قبلی">قبلی</button>
+    <button type="button" class="button primary" data-audio-toggle aria-label="توقف صدا">توقف</button>
+    <button type="button" class="post-action" data-audio-next aria-label="صدای بعدی">بعدی</button>
+    <button type="button" class="post-action" data-audio-close aria-label="بستن پخش صوتی">×</button>
+  </div>
+  <label class="audio-seek"><span class="sr-only">جابه‌جایی زمان صدا</span><input type="range" aria-label="جابه‌جایی زمان صدا" data-audio-seek min="0" max="100" value="0" step="0.1" disabled><span class="small muted" data-audio-time dir="ltr">0:00 / 0:00</span></label>
+</section>

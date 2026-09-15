@@ -1,0 +1,17 @@
+asgiref==3.12.1
+boto3==1.43.93
+botocore==1.43.93
+brotli==1.2.0
+dj-database-url==3.1.2
+django==5.2.17
+gunicorn==26.2.0
+jmespath==1.1.0
+psycopg==3.3.5
+psycopg-binary==3.3.5
+python-dateutil==2.9.0.post0
+s3transfer==0.19.2
+six==1.17.0
+sqlparse==0.6.0
+typing-extensions==4.16.0
+urllib3==2.7.0
+whitenoise==6.12.0

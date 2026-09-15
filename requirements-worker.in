@@ -1,0 +1,4 @@
+-r requirements-web.in
+yt-dlp[default]
+gunicorn
+Pillow

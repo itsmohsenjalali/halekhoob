@@ -1,0 +1,9 @@
+[Unit]
+Description=Renew the independent Halekhoob TLS certificate
+Requires=docker.service
+After=docker.service network-online.target
+[Service]
+Type=oneshot
+UMask=0077
+WorkingDirectory=/opt/halekhoob
+ExecStart=/opt/halekhoob/deploy/renew-server-tls.sh

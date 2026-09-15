@@ -1,0 +1,42 @@
+{% load static archive %}
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f6f5ef">
+  <title>{% block title %}حال‌خوب{% endblock %} · آرشیو شخصی</title>
+  <link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml">
+  <link rel="stylesheet" href="{% static 'theme/tokens.css' %}">
+  <link rel="stylesheet" href="{% static 'app.css' %}">
+  <script src="{% static 'app.js' %}" defer></script>
+</head>
+<body class="{% block body_class %}{% endblock %}">
+<a class="skip-link" href="#main">رفتن به محتوا</a>
+{% if user.is_authenticated %}
+<aside class="sidebar" aria-label="ناوبری اصلی">
+  <div class="brand-row"><a class="brand" href="{% url 'home' %}"><span class="brand-mark" aria-hidden="true">◒</span> حال‌خوب<span class="brand-caption">چیزهایی برای دوباره دیدن</span></a><button type="button" class="button mobile-menu" aria-expanded="false" aria-controls="main-navigation sidebar-utilities">منو ☰</button></div>
+  <nav class="main-nav" id="main-navigation">
+    <a href="{% url 'home' %}" {% if request.resolver_match.url_name == 'home' %}aria-current="page"{% endif %}><span aria-hidden="true">⌂</span> برای حالِ الان</a>
+    <a href="{% url 'archive' %}" {% if request.resolver_match.url_name == 'archive' %}aria-current="page"{% endif %}><span aria-hidden="true">▤</span> همهٔ ویدیوها</a>
+    <a href="{% url 'archive' %}?filter=favorites"><span aria-hidden="true">♡</span> دوست‌داشتنی‌ها</a>
+    <a href="{% url 'archive' %}?filter=pending"><span aria-hidden="true">◷</span> صف دریافت <small>{{ queue_count }}</small></a>
+  </nav>
+  <div class="sidebar-bottom" id="sidebar-utilities">
+    <p class="small-label">فضای شخصی تو</p>
+    <progress value="{{ storage_percent }}" max="100" aria-label="فضای مصرف‌شده"></progress>
+    <p class="muted small"><bdi>{{ storage_used|decimal_size }}</bdi> از <bdi>{{ storage_limit|decimal_size }}</bdi></p>
+    <div class="sidebar-actions"><a href="{% url 'moods' %}">مدیریت حس‌ها</a><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="text-button" type="submit">خروج</button></form></div>
+  </div>
+</aside>
+{% endif %}
+<div class="{% if user.is_authenticated %}workspace{% else %}guest-workspace{% endif %}">
+  {% if user.is_authenticated %}<header class="topbar">{% block topbar_label %}<span class="private-label"><span aria-hidden="true">●</span> فقط برای خودت</span>{% endblock %}<a class="button primary" href="{% url 'add' %}"><span aria-hidden="true">＋</span> افزودن ویدیو</a></header>{% endif %}
+  <main id="main" tabindex="-1">
+    {% if messages %}<div class="messages" role="status">{% for message in messages %}<p class="message {{ message.tags }}">{{ message }}</p>{% endfor %}</div>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="footer"><span>حال‌خوب</span><p>برای وقت‌هایی که کمی حالِ بهتر می‌خواهی.</p></footer>
+</div>
+</body>
+</html>

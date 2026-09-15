@@ -1,0 +1,9 @@
+[Unit]
+Description=Halekhoob weekly portable full backup
+Requires=docker.service
+After=docker.service
+[Service]
+Type=oneshot
+UMask=0077
+WorkingDirectory=/opt/halekhoob
+ExecStart=/usr/bin/flock -w 10 /run/lock/halekhoob-backup.lock /usr/bin/python3 scripts/cloud_backup.py /var/backups/halekhoob --server --full

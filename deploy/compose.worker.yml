@@ -1,0 +1,14 @@
+services:
+  worker:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.worker
+    env_file: ${WORKER_ENV_FILE:-../.env.worker}
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 45s
+    volumes:
+      - worker-data:/data
+    # No inbound port is required. Downloads are still checked by the application.
+volumes:
+  worker-data:

@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}ورود{% endblock %}
+{% block content %}
+<div class="login-layout">
+  <section class="login-intro"><span class="brand-mark large" aria-hidden="true">◒</span><p class="brand">حال‌خوب</p><h1>خوبی‌ها را<br>برای خودت نگه دار.</h1><p class="lede">ویدیوهایی که بهت امید، آرامش و انگیزه می‌دهند؛ یک‌جا، برای دوباره دیدن.</p></section>
+  <section class="login-form"><h2>به فضای خودت برگرد</h2><p class="muted">آرشیوت فقط بعد از ورود دیده می‌شود.</p><form method="post" class="stack" data-submit>{% csrf_token %}{{ form.non_field_errors }}
+    <div class="field"><label for="id_username">نام کاربری</label><input id="id_username" name="username" dir="ltr" autocomplete="username" required autofocus value="{{ form.username.value|default:'' }}">{{ form.username.errors }}</div>
+    <div class="field"><label for="id_password">رمز عبور</label><input id="id_password" name="password" type="password" dir="ltr" autocomplete="current-password" required>{{ form.password.errors }}</div>
+    <input type="hidden" name="next" value="{{ next }}"><button type="submit" class="button primary">ورود به آرشیو</button>
+  </form></section>
+</div>
+{% endblock %}

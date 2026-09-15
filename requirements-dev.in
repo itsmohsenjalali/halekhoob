@@ -1,0 +1,7 @@
+-r requirements.txt
+pytest
+pytest-django
+playwright
+ruff
+-r requirements-worker.txt
+moto[s3]==5.2.3

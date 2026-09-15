@@ -1,0 +1,34 @@
+[Unit]
+Description=Hal-e Khoob persistent download worker
+After=network-online.target motivation-web.service
+RequiresMountsFor=/srv/motivation
+
+[Service]
+Type=simple
+User=motivation
+Group=motivation
+WorkingDirectory=/opt/motivation/app
+EnvironmentFile=/etc/motivation/app.env
+Environment=PATH=/opt/motivation/venv/bin:/opt/motivation/node/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/opt/motivation/venv/bin/python manage.py runworker
+Restart=on-failure
+RestartSec=5
+KillMode=control-group
+TimeoutStopSec=20
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/motivation/data
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+# Public DNS avoids the host's loopback resolver, blocked below.
+BindReadOnlyPaths=/opt/motivation/app/deploy/resolv.conf:/etc/resolv.conf
+IPAddressDeny=127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 169.254.0.0/16 100.64.0.0/10 0.0.0.0/8 224.0.0.0/4 240.0.0.0/4 ::1/128 fc00::/7 fe80::/10 ff00::/8 ::ffff:0:0/96
+MemoryMax=3G
+CPUQuota=150%
+TasksMax=128
+
+[Install]
+WantedBy=multi-user.target

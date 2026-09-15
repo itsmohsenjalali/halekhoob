@@ -1,0 +1,20 @@
+<article class="feed-post" id="post-{{ video.pk }}" data-post-id="{{ video.pk }}" aria-labelledby="post-title-{{ video.pk }}">
+  <header class="post-header"><span class="post-avatar" aria-hidden="true">{% if video.platform == 'instagram' %}◎{% else %}▷{% endif %}</span><div class="post-author"><h3 id="post-title-{{ video.pk }}">{{ video.display_title }}</h3><p class="small muted">{{ video.platform_label }}{% if video.duration %} · <bdi>{{ video.duration_label }}</bdi>{% endif %}</p></div>
+    <details class="post-menu"><summary aria-label="گزینه‌های {{ video.display_title }}">•••</summary><div><a href="{% url 'edit' video.pk %}">ویرایش یادداشت و حس‌ها</a><a href="{{ video.source_url }}" target="_blank" rel="noopener noreferrer">دیدن منبع اصلی ↗</a><a class="danger-link" href="{% url 'delete' video.pk %}">حذف از آرشیو</a></div></details>
+  </header>
+  {% if video.status == 'ready' %}
+  <div class="post-media">
+    <video class="feed-video" data-feed-video playsinline muted loop preload="none" src="{% url 'media' video.pk 'video' %}" {% if video.thumbnail_name %}poster="{% url 'media' video.pk 'thumbnail' %}"{% endif %} aria-label="{{ video.display_title }}">مرورگرت از پخش ویدیو پشتیبانی نمی‌کند.</video>
+    <button class="media-play-toggle" data-feed-play type="button" aria-label="پخش ویدیو"><span class="media-play-indicator" aria-hidden="true"><svg viewBox="0 0 24 24"><path class="play-shape" d="M8 5v14l11-7z"/><path class="pause-shape" d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg></span></button>
+    <button class="media-sound-toggle" data-feed-sound type="button" aria-label="روشن کردن صدا" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><g class="sound-off-shape"><path d="m16 9 5 6m0-6-5 6"/></g><g class="sound-on-shape"><path d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></g></svg></button>
+    <noscript><a class="button" href="{% url 'detail' video.pk %}">پخش ویدیو</a></noscript>
+  </div>
+  {% else %}<div class="post-download"><span class="empty-symbol" aria-hidden="true">{% if video.status == 'failed' %}↻{% else %}◷{% endif %}</span><p class="status-label">{{ video.get_status_display }}</p><p class="small muted">{{ video.error }}</p><a class="button" href="{% url 'detail' video.pk %}">وضعیت دریافت</a></div>{% endif %}
+  <div class="post-content">
+    <div class="post-actions"><form action="{% url 'favorite' video.pk %}" method="post" data-feed-favorite>{% csrf_token %}<input type="hidden" name="next" value="{{ feed_return }}"><button class="post-action post-heart" type="submit" aria-label="دوست‌داشتن {{ video.display_title }}" aria-pressed="{{ video.favorite|yesno:'true,false' }}"><span data-heart aria-hidden="true">{% if video.favorite %}♥{% else %}♡{% endif %}</span><span class="small">دوست‌داشتنی</span></button></form>
+    </div>
+    <p class="small muted post-notice" data-post-notice role="status"></p>
+    {% if video.note %}<details class="post-note"><summary>{{ video.note|truncatechars:110 }}</summary><p>{{ video.note|linebreaksbr }}</p></details>{% endif %}
+    <div class="post-tags">{% for mood in video.moods.all %}<a data-feed-filter href="{{ feed_base }}?mood={{ mood.pk }}{% if mood_query %}&amp;{{ mood_query }}{% endif %}">{{ mood.name }}</a>{% endfor %}</div>
+  </div>
+</article>

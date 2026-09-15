@@ -1,0 +1,128 @@
+name: halekhoob
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-app-environment: &app-environment
+  DJANGO_DEBUG: "0"
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY}
+  APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://127.0.0.1:8088}
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,web}
+  DATABASE_URL: postgresql://halekhoob:${POSTGRES_APP_PASSWORD:?Set POSTGRES_APP_PASSWORD}@db:5432/halekhoob
+  DATABASE_DOCKER_INTERNAL: "1"
+  MEDIA_BACKEND: r2
+  R2_ENDPOINT_URL: ${R2_ENDPOINT_URL:?Set R2_ENDPOINT_URL}
+  R2_BUCKET_NAME: ${R2_BUCKET_NAME:?Set R2_BUCKET_NAME}
+  R2_PREFIX: ${R2_PREFIX:-archive}
+  R2_URL_TTL: ${R2_URL_TTL:-3600}
+  ARCHIVE_MAX_BYTES: ${ARCHIVE_MAX_BYTES:-8000000000}
+  R2_DELETE_DELAY_DAYS: "7"
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: halekhoob
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?Set POSTGRES_ADMIN_PASSWORD}
+      APP_DB_PASSWORD: ${POSTGRES_APP_PASSWORD:?Set POSTGRES_APP_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/10-app-user.sh:/docker-entrypoint-initdb.d/10-app-user.sh:ro
+    networks: [database]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d halekhoob"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    mem_limit: 384m
+    cpus: 0.25
+    logging: *logging
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+    restart: unless-stopped
+    init: true
+    environment:
+      <<: *app-environment
+      R2_ACCESS_KEY_ID: ${R2_WEB_ACCESS_KEY_ID:?Set R2_WEB_ACCESS_KEY_ID}
+      R2_SECRET_ACCESS_KEY: ${R2_WEB_SECRET_ACCESS_KEY:?Set R2_WEB_SECRET_ACCESS_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [database, frontend]
+    read_only: true
+    tmpfs: ["/tmp:size=64m,mode=1777"]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz/', timeout=5)"]
+      interval: 20s
+      timeout: 8s
+      retries: 3
+      start_period: 20s
+    mem_limit: 256m
+    cpus: 0.5
+    logging: *logging
+
+  worker:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.worker
+    restart: unless-stopped
+    init: true
+    environment:
+      <<: *app-environment
+      R2_ACCESS_KEY_ID: ${R2_WORKER_ACCESS_KEY_ID:?Set R2_WORKER_ACCESS_KEY_ID}
+      R2_SECRET_ACCESS_KEY: ${R2_WORKER_SECRET_ACCESS_KEY:?Set R2_WORKER_SECRET_ACCESS_KEY}
+      DATA_DIR: /data
+      MIN_FREE_BYTES: "2000000000"
+      DOWNLOAD_TIMEOUT: "1800"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [database, downloads]
+    volumes:
+      - worker-data:/data
+    read_only: true
+    tmpfs: ["/tmp:size=64m,mode=1777"]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    stop_grace_period: 45s
+    mem_limit: 1024m
+    cpus: 0.75
+    logging: *logging
+
+  gateway:
+    image: nginx:1.28-alpine
+    restart: unless-stopped
+    environment:
+      PROXY_SCHEME: ${PROXY_SCHEME:-http}
+      NGINX_ENVSUBST_FILTER: PROXY_SCHEME
+    ports:
+      - "${APP_BIND_HOST:-127.0.0.1}:${APP_PORT:-8088}:8080"
+    volumes:
+      - ./nginx/server.conf.template:/etc/nginx/templates/default.conf.template:ro
+    depends_on:
+      web:
+        condition: service_healthy
+    networks: [frontend]
+    mem_limit: 64m
+    cpus: 0.1
+    logging: *logging
+
+volumes:
+  postgres-data:
+  worker-data:
+
+networks:
+  database:
+    internal: true
+  frontend:
+  downloads:

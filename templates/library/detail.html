@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}{{ video.display_title }}{% endblock %}
+{% block content %}
+<a class="back-link" href="{% url 'archive' %}">← برگشت به آرشیو</a>
+<div class="watch-layout">
+  <section class="watch-main">
+  {% if video.status == 'ready' %}<video class="player" controls playsinline preload="metadata" {% if video.thumbnail_name %}poster="{% url 'media' video.pk 'thumbnail' %}"{% endif %} aria-label="{{ video.display_title }}"><source src="{% url 'media' video.pk 'video' %}" type="video/mp4">مرورگرت از پخش ویدیو پشتیبانی نمی‌کند.</video><p class="small muted">نسخهٔ ذخیره‌شده در آرشیو تو</p>
+  {% else %}<div class="download-state" data-status-url="{% url 'status' video.pk %}" data-initial-status="{{ video.status }}"><span class="empty-symbol" aria-hidden="true">{% if video.status == 'failed' %}↻{% else %}◷{% endif %}</span><p class="status-label" data-status-label>{{ video.get_status_display }}</p><progress max="100" value="{{ video.progress }}" aria-label="پیشرفت دریافت ویدیو"></progress><p data-status-error class="muted">{{ video.error|default:'دریافت در پس‌زمینه انجام می‌شود؛ لازم نیست این صفحه باز بماند.' }}</p><p class="small muted" data-connection-status role="status"></p></div>{% endif %}
+  <div class="watch-heading"><h1>{{ video.display_title }}</h1><form action="{% url 'favorite' video.pk %}" method="post">{% csrf_token %}<button class="button favorite-toggle" aria-pressed="{{ video.favorite|yesno:'true,false' }}" type="submit">{% if video.favorite %}♥ دوست‌داشتنی{% else %}♡ دوست‌داشتنش{% endif %}</button></form></div>
+  <p class="muted">{{ video.platform_label }}{% if video.duration %} · <bdi>{{ video.duration_label }}</bdi>{% endif %}</p>
+  <div class="tags">{% for mood in video.moods.all %}<a href="{% url 'home' %}?mood={{ mood.pk }}">{{ mood.name }}</a>{% endfor %}</div>
+  </section>
+  <aside class="watch-notes"><h2>یادداشتِ تو</h2>{% if video.note %}<div class="note-text">{{ video.note|linebreaksbr }}</div>{% else %}<p class="muted">کدام جمله یا لحظهٔ این ویدیو بهت کمک کرد؟ می‌توانی اینجا برای خودت بنویسی.</p>{% endif %}<a class="back-link" href="{% url 'edit' video.pk %}">ویرایش یادداشت و حس‌ها ←</a>
+  <div class="watch-actions">{% if video.status == 'failed' %}<form method="post" action="{% url 'retry' video.pk %}">{% csrf_token %}<button class="button primary" type="submit">تلاش دوباره</button></form>{% endif %}<a href="{{ video.source_url }}" target="_blank" rel="noopener noreferrer">دیدن منبع اصلی ↗</a><a class="danger-link" href="{% url 'delete' video.pk %}">حذف از آرشیو</a></div></aside>
+</div>
+{% endblock %}

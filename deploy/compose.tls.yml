@@ -1,0 +1,27 @@
+# An independent TLS listener. The existing site's Nginx is neither changed nor restarted.
+services:
+  gateway:
+    environment:
+      TLS_DOMAIN: ${TLS_DOMAIN:?Set TLS_DOMAIN}
+      TLS_PORT: ${TLS_PORT:-8443}
+      NGINX_ENVSUBST_FILTER: TLS_DOMAIN|TLS_PORT
+    ports:
+      - "${TLS_BIND_HOST:-0.0.0.0}:${TLS_PORT:-8443}:8443"
+    volumes:
+      - ./nginx/server-tls.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - tls-data:/etc/letsencrypt:ro
+
+  certbot:
+    image: certbot/certbot:latest
+    profiles: [maintenance]
+    volumes:
+      - tls-data:/etc/letsencrypt
+      - acme-webroot:/var/www/certbot
+    mem_limit: 192m
+    cpus: 0.25
+
+volumes:
+  tls-data:
+  acme-webroot:
+    external: true
+    name: ${ACME_WEBROOT_VOLUME:?Set existing ACME webroot volume}

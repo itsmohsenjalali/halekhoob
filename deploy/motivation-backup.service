@@ -1,0 +1,11 @@
+[Unit]
+Description=Rotate private archive volume backups within Always Free quota
+After=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/motivation/backup.env
+ExecStart=/usr/bin/python3 /opt/motivation/app/deploy/oci_backup.py --apply
+TimeoutStartSec=4h
+TimeoutStopSec=240
+UMask=0077

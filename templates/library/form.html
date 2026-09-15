@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}{% if adding %}افزودن ویدیو{% else %}ویرایش ویدیو{% endif %}{% endblock %}
+{% block content %}
+<div class="form-layout"><section class="form-intro"><a class="back-link" href="{% if adding %}{% url 'archive' %}{% else %}{% url 'detail' video.pk %}{% endif %}">← برگشت</a><h1>{% if adding %}این حس را<br>نگه دار.{% else %}با کلمات<br>خودت.{% endif %}</h1><p class="lede">{% if adding %}لینکش را بفرست و بگو چه حسی بهت می‌دهد. باقی‌اش را اینجا نگه می‌داریم.{% else %}یک نام آشنا یا یادداشت کوتاه، پیدا کردن این ویدیو را راحت‌تر می‌کند.{% endif %}</p>{% if adding %}<p class="form-hint">یوتیوب و اینستاگرام · ویدیوی عمومی<br>تا ۲۰ دقیقه و ۵۰۰ مگابایت</p>{% endif %}</section>
+<form method="post" class="editor-form stack" data-submit>{% csrf_token %}{{ form.non_field_errors }}
+{% if adding %}<div class="field">{{ form.source_url.label_tag }}{{ form.source_url }}{{ form.source_url.errors }}<p class="help">لینک خود ویدیو را کپی کن؛ لینک صفحه یا مجموعه پشتیبانی نمی‌شود.</p></div>{% endif %}
+<div class="field"><label for="{{ form.title.id_for_label }}">عنوان دلخواه (اختیاری)</label>{{ form.title }}{{ form.title.errors }}</div>
+<fieldset><legend>چه حسی بهت می‌دهد؟ <span class="muted small">حداقل یکی</span></legend>{{ form.moods }}{{ form.moods.errors }}</fieldset>
+<div class="field">{{ form.new_mood.label_tag }}{{ form.new_mood }}{{ form.new_mood.errors }}</div>
+<div class="field"><label for="{{ form.note.id_for_label }}">چرا می‌خواهی دوباره ببینیش؟ (اختیاری)</label>{{ form.note }}{{ form.note.errors }}</div>
+<div class="form-actions"><button class="button primary" type="submit">{% if adding %}ذخیره و دریافت ویدیو{% else %}ذخیرهٔ تغییرات{% endif %}</button><p class="small muted">{% if adding %}می‌توانی بعد از ثبت، صفحه را ببندی.{% endif %}</p></div>
+</form></div>
+{% endblock %}

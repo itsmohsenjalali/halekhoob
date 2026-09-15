@@ -1,0 +1,26 @@
+<div class="feed-filters">
+  <nav class="mood-picker" aria-label="انتخاب حس دلخواه">
+    <a data-feed-filter href="{{ feed_base }}{% if mood_query %}?{{ mood_query }}{% endif %}" class="mood {% if not selected_mood %}selected{% endif %}" {% if not selected_mood %}aria-current="true"{% endif %}>همهٔ حس‌ها</a>
+    {% for mood in all_moods %}<a data-feed-filter class="mood {% if selected_mood.pk == mood.pk %}selected{% endif %}" href="{{ feed_base }}?mood={{ mood.pk }}{% if mood_query %}&amp;{{ mood_query }}{% endif %}" {% if selected_mood.pk == mood.pk %}aria-current="true"{% endif %}><span aria-hidden="true">{{ mood.symbol }}</span><span>{{ mood.name }}</span></a>{% endfor %}
+  </nav>
+  <form method="get" class="search-form" role="search" data-feed-search action="{{ feed_base }}"><label class="sr-only" for="search">جست‌وجو در عنوان و یادداشت</label><input id="search" type="search" name="q" value="{{ query }}" placeholder="بین ویدیوها بگرد…">{% if selected_mood %}<input type="hidden" name="mood" value="{{ selected_mood.pk }}">{% endif %}{% if filter_mode %}<input type="hidden" name="filter" value="{{ filter_mode }}">{% endif %}<button class="search-button" aria-label="جست‌وجو" type="submit">⌕</button></form>
+</div>
+<section class="feed-collection" aria-labelledby="collection-title">
+  <div class="feed-caption"><h2 id="collection-title" tabindex="-1">{% if selected_mood %}برای کمی {{ selected_mood.name }}{% elif filter_mode == 'favorites' %}دوست‌داشتنی‌ها{% elif filter_mode == 'pending' %}صف دریافت{% else %}از آرشیو تو{% endif %}</h2><span class="small muted">{{ page_obj.paginator.count }} ویدیو</span></div>
+  <div class="timeline-posts" data-feed-posts>
+    <div class="audio-launch" data-audio-launch data-playlist-url="{{ playlist_url }}" hidden><button class="button primary" type="button" data-audio-start disabled>آماده‌سازی فهرست…</button><p class="small muted" data-audio-hint role="status"></p></div>
+    {% for video in page_obj %}{% include 'library/card.html' %}{% empty %}
+    <div class="empty-state"><span class="empty-symbol" aria-hidden="true">◒</span>
+      {% if query %}<h3>چیزی با «{{ query }}» پیدا نشد.</h3><p>با یک کلمهٔ دیگر جست‌وجو کن.</p>
+      {% elif selected_mood %}<h3>هنوز ویدیویی برای {{ selected_mood.name }} اینجا نیست.</h3><p>ویدیویی که این حس را بهت می‌دهد، به آرشیوت اضافه کن.</p>
+      {% elif filter_mode == 'favorites' %}<h3>دوست‌داشتنی‌هایت را انتخاب کن.</h3><p>قلب زیر هر ویدیو را بزن تا اینجا پیدایش کنی.</p>
+      {% elif filter_mode == 'pending' %}<h3>ویدیویی در انتظار دریافت نیست.</h3>
+      {% else %}<h3>اولین حالِ خوبت را نگه دار.</h3><p>لینک یک ویدیو را اضافه کن؛ بعد همین‌جا تماشایش کن.</p>{% endif %}
+      <a class="button" href="{% url 'add' %}">افزودن ویدیو</a>
+    </div>{% endfor %}
+  </div>
+  <nav class="feed-pagination" data-feed-pagination aria-label="ادامهٔ تایم‌لاین">
+    {% if page_obj.has_previous %}<a class="button feed-previous" data-feed-filter href="{{ feed_base }}?{{ page_query }}&amp;page={{ page_obj.previous_page_number }}">ویدیوهای قبلی</a>{% endif %}
+    {% if page_obj.has_next %}<a class="button" data-feed-next href="{{ feed_base }}?{{ page_query }}&amp;page={{ page_obj.next_page_number }}">ویدیوهای بیشتر</a>{% elif page_obj %}<p class="small muted">تا اینجای آرشیوت را دیدی.</p>{% endif %}
+  </nav>
+</section>

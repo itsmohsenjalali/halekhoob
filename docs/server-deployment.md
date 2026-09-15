@@ -1,0 +1,177 @@
+# Docker server deployment with PostgreSQL and R2
+
+This guide installs Halekhoob in `/opt/halekhoob`. Substitute your own host, domain,
+R2 account and credentials. It contains no configuration for a particular live
+installation. Use a Linux server with Docker Engine and the Compose plugin;
+allow at least 4 GB RAM and sufficient disk for downloads, builds and backups.
+
+## 1. Obtain the code
+
+On the server:
+
+```sh
+git clone https://github.com/itsmohsenjalali/halekhoob.git /opt/halekhoob
+cd /opt/halekhoob
+install -m 600 deploy/server.env.example .env.server
+```
+
+The public repository can be fetched without a GitHub token or deploy key. Keep
+`.env.server` private and outside Git. Never regenerate passwords on an existing
+database. Docker reads this file through `deploy/server.sh`.
+
+## 2. Configure the bucket and application
+
+Create a private **Cloudflare R2 Standard** bucket with public access disabled.
+Create two S3-compatible credentials scoped to that bucket: read-only for web,
+read/write for the worker. Enter them in `.env.server` along with:
+
+- `R2_ENDPOINT_URL`: the account's HTTPS S3 API endpoint.
+- `R2_BUCKET_NAME`, `R2_PREFIX`: the bucket and a dedicated prefix such as `archive`.
+- `DJANGO_SECRET_KEY`: a long random secret.
+- `POSTGRES_ADMIN_PASSWORD` and `POSTGRES_APP_PASSWORD`: different random hex
+  passwords. Hex avoids URL-encoding issues in the database connection string.
+- `ARCHIVE_MAX_BYTES`: the desired archive cap (8 GB in the example).
+
+Generate each secret separately with `python3 -c 'import secrets; print(secrets.token_hex(48))'`
+in your own private terminal. Do not commit output or reuse credentials.
+Alternatively, `scripts/init_server_env.py` can combine existing private web and
+worker R2 environment files; run it with `--help` for supported arguments.
+
+In the R2 dashboard, configure bucket CORS using `deploy/r2-cors.json`, replacing
+`https://archive.example.com:8443` with your actual application origin, including
+its port. CORS does not make the bucket public. Web playback redirects to expiring
+signed URLs; do not share them. Never apply the example origin unchanged.
+
+## 3. Start through an SSH tunnel
+
+The default configuration binds the gateway to `127.0.0.1:8088`. PostgreSQL has no
+public port; only the application containers join its private network.
+
+```sh
+COMPOSE_PARALLEL_LIMIT=1 deploy/server.sh build web worker
+deploy/server.sh up -d db
+deploy/server.sh run --rm web python manage.py migrate --noinput
+deploy/server.sh run --rm web python manage.py createsuperuser
+deploy/server.sh up -d web worker gateway
+deploy/server.sh ps
+curl --fail http://127.0.0.1:8088/healthz/
+```
+
+From your computer, forward the loopback port:
+
+```sh
+ssh -N -L 8088:127.0.0.1:8088 USER@YOUR_SERVER
+```
+
+Then open `http://127.0.0.1:8088`. Create only one application owner.
+Do not publish loopback HTTP to the internet. Public origins require HTTPS.
+
+## 4. Optional independent HTTPS listener
+
+The supplied TLS overlay listens on port 8443, so an existing website can continue
+using ports 80 and 443. To use the provided Let's Encrypt webroot flow:
+
+1. Point your domain's DNS to this server and allow inbound TCP 8443.
+2. Arrange for your existing HTTP server on port 80 to serve
+   `/.well-known/acme-challenge/` for this domain from a Docker volume. This must
+   work before requesting a certificate. The overlay does not configure the
+   existing site's Nginx for you.
+3. In `.env.server`, set `ENABLE_TLS=1`, `TLS_DOMAIN=archive.example.com`,
+   `TLS_PORT=8443`, `TLS_BIND_HOST=0.0.0.0`, `APP_PUBLIC_URL=https://archive.example.com:8443`,
+   `PROXY_SCHEME=https`, and add the domain to `DJANGO_ALLOWED_HOSTS`.
+   Set `ACME_WEBROOT_VOLUME` to that existing webroot volume's exact name.
+4. Obtain a certificate before recreating the gateway:
+
+```sh
+deploy/server.sh run --rm --no-deps certbot certonly --non-interactive \
+  --agree-tos --email YOUR_EMAIL --webroot -w /var/www/certbot -d YOUR_DOMAIN
+deploy/server.sh up -d web worker gateway
+curl --fail https://archive.example.com:8443/healthz/
+deploy/server.sh run --rm --no-deps certbot renew --dry-run --no-random-sleep-on-renew
+```
+
+The certificate is held in the application's own `halekhoob_tls-data` volume.
+Only the ACME webroot is shared; never share another site's certificate volume.
+The renewal script reloads only this application's gateway. An existing reverse
+proxy can also terminate TLS, but its trusted headers and routing must be
+configured for your infrastructure rather than using the independent overlay.
+
+## 5. Day-to-day commands
+
+```sh
+cd /opt/halekhoob
+deploy/server.sh ps
+deploy/server.sh logs --tail=100 web worker gateway
+deploy/server.sh restart worker
+deploy/server.sh exec web python manage.py changepassword USERNAME
+```
+
+Keep separate bucket-scoped web and worker keys. The PostgreSQL application role
+has no superuser or role-creation privileges. Container memory, CPU and logs are
+bounded. Download scratch space lives in `halekhoob_worker-data`; the database
+lives in `halekhoob_postgres-data`.
+
+## 6. Updating from GitHub
+
+CI tests changes; it does not deploy them. On the server, review the incoming
+changes and take a full backup before updating. Keep the previous commit ID for
+rollback:
+
+```sh
+cd /opt/halekhoob
+git status --short
+git fetch origin
+git log --oneline HEAD..origin/main
+git rev-parse HEAD
+python3 scripts/cloud_backup.py /var/backups/halekhoob --server --full
+git pull --ff-only
+COMPOSE_PARALLEL_LIMIT=1 deploy/server.sh build web worker
+deploy/server.sh stop worker
+deploy/server.sh run --rm web python manage.py migrate --noinput
+deploy/server.sh up -d web worker gateway
+deploy/server.sh ps
+```
+
+Verify `/healthz/`, login, media playback and the queue through the configured
+origin. If a step fails after stopping the worker, resolve the failure and
+explicitly start it again. A rollback of source/images does not reverse database
+migrations: review migration compatibility and restore a tested backup if needed.
+Do not use `docker compose down -v` for an update; it deletes database volumes.
+
+## 7. Backups and TLS renewal
+
+From `/opt/halekhoob`, install the supplied service/timer files after confirming
+their schedule and backup path:
+
+```sh
+install -m 644 deploy/halekhoob-backup.service deploy/halekhoob-backup.timer /etc/systemd/system/
+install -m 644 deploy/halekhoob-full-backup.service deploy/halekhoob-full-backup.timer /etc/systemd/system/
+# Only when the TLS overlay is configured:
+install -m 644 deploy/halekhoob-tls-renew.service deploy/halekhoob-tls-renew.timer /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now halekhoob-backup.timer halekhoob-full-backup.timer
+# Only when the TLS overlay is configured:
+systemctl enable --now halekhoob-tls-renew.timer
+systemctl list-timers --all 'halekhoob-*'
+```
+
+The defaults retain four daily metadata backups and four weekly full backups in
+`/var/backups/halekhoob`. Schedules use the server timezone. Full export needs
+roughly twice the archive's size in scratch space in addition to retained
+backups. Fetch a private copy to another machine regularly; these timers alone
+do not provide off-server protection.
+
+```sh
+python3 scripts/cloud_backup.py /var/backups/halekhoob --server --full
+journalctl -u halekhoob-backup.service -n 50 --no-pager
+```
+
+Backups contain private account and archive data. Restore to an empty database,
+preferably with a fresh bucket prefix, after `migrate` and before creating an
+owner. Use `import_portable` with write-capable R2 credentials; inspect its `--help`
+for arguments. Stop the worker and make the input readable by container UID 10001.
+Metadata-only restore requires the original objects to remain available; full
+backups include the objects. R2 deletion is delayed seven days by default.
+
+Run the [manual acceptance checks](testing.md#manual-acceptance) on your own server
+before relying on it for an archive.

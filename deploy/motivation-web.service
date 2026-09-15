@@ -1,0 +1,28 @@
+[Unit]
+Description=Hal-e Khoob private video library
+After=network-online.target
+RequiresMountsFor=/srv/motivation
+
+[Service]
+Type=simple
+User=motivation
+Group=motivation
+WorkingDirectory=/opt/motivation/app
+EnvironmentFile=/etc/motivation/app.env
+Environment=PATH=/opt/motivation/venv/bin:/opt/motivation/node/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/opt/motivation/venv/bin/gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 2 --threads 4 --timeout 120 --access-logfile -
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/motivation/data
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+MemoryMax=1G
+TasksMax=128
+
+[Install]
+WantedBy=multi-user.target
