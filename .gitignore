@@ -11,6 +11,11 @@ artifacts/
 .DS_Store
 .env.*
 *.tar
+*.tar.gz
+*.tgz
+*.zip
+*.sql
+*.bak
 *.dump
 passwords.txt
 .hallmark/

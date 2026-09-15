@@ -7,6 +7,11 @@ staticfiles
 **/__pycache__
 *.sqlite3*
 *.tar
+*.tar.gz
+*.tgz
+*.zip
+*.sql
+*.bak
 passwords.txt
 .hallmark
 docs/private
