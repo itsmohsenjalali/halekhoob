@@ -7,7 +7,7 @@ export default function Page() {
       </a>
       <h1>آرشیو شخصی‌ات را بساز.</h1>
       <p>شروع با گوگل، برای ویدیوهایی که دوست داری دوباره ببینی.</p>
-      <div dir="ltr">
+      <div dir="rtl">
         <SignUp
           routing="path"
           path="/sign-up"

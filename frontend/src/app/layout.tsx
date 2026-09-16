@@ -1,4 +1,5 @@
 import { ClerkProvider } from "@clerk/nextjs";
+import { faIR } from "@clerk/localizations";
 import type { Metadata } from "next";
 import "./globals.css";
 export const metadata: Metadata = {
@@ -12,6 +13,7 @@ export default function RootLayout({
     <html lang="fa" dir="rtl">
       <body>
         <ClerkProvider
+          localization={faIR}
           signInUrl="/sign-in"
           signUpUrl="/sign-up"
           signInFallbackRedirectUrl="/"

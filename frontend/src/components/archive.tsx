@@ -247,12 +247,13 @@ export default function Archive() {
       );
       const anchor = document.createElement("a");
       anchor.href = data.url;
-      anchor.rel = "noreferrer";
+      anchor.rel = "noopener noreferrer";
+      anchor.target = "_blank";
       anchor.download = "";
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
-      setNotice("دانلود شروع شد؛ فایل در بخش دانلودهای مرورگر ذخیره می‌شود.");
+      setNotice("لینک دانلود باز شد؛ فایل را در بخش دانلودهای مرورگر پیدا می‌کنی.");
     } catch (e) {
       setNotice((e as Error).message);
     }

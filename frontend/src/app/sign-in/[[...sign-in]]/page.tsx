@@ -7,7 +7,7 @@ export default function Page() {
       </a>
       <h1>لحظه‌های خوبت، همیشه نزدیک.</h1>
       <p>با حساب گوگل وارد شو؛ آرشیو و دسته‌ها فقط برای خودت هستند.</p>
-      <div dir="ltr">
+      <div dir="rtl">
         <SignIn
           routing="path"
           path="/sign-in"

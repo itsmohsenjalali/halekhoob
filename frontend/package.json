@@ -9,17 +9,18 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@clerk/localizations": "4.17.1",
     "@clerk/nextjs": "7.9.4",
+    "lucide-react": "1.46.0",
     "next": "16.3.5",
     "react": "19.3.0",
-    "react-dom": "19.3.0",
-    "lucide-react": "1.46.0"
+    "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@types/node": "22.20.3",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
-    "typescript": "7.0.2",
-    "@playwright/test": "1.63.0"
+    "typescript": "7.0.2"
   }
 }
