@@ -7,7 +7,7 @@ RequiresMountsFor=/srv/motivation
 Type=simple
 User=motivation
 Group=motivation
-WorkingDirectory=/opt/motivation/app
+WorkingDirectory=/opt/motivation/app/backend
 EnvironmentFile=/etc/motivation/app.env
 Environment=PATH=/opt/motivation/venv/bin:/opt/motivation/node/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=/opt/motivation/venv/bin/gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 2 --threads 4 --timeout 120 --access-logfile -

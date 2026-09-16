@@ -7,4 +7,4 @@ source "${CLOUD_ENV_FILE:-.env.cloud}"
 set +a
 # Explicit direct connection for migrations and maintenance, not the web pooler.
 export DATABASE_URL="${DATABASE_DIRECT_URL:?Set DATABASE_DIRECT_URL in the private env file}"
-exec .venv/bin/python manage.py "$@"
+exec .venv/bin/python backend/manage.py "$@"

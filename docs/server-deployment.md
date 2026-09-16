@@ -42,17 +42,24 @@ In the R2 dashboard, configure bucket CORS using `deploy/r2-cors.json`, replacin
 its port. CORS does not make the bucket public. Web playback redirects to expiring
 signed URLs; do not share them. Never apply the example origin unchanged.
 
+### Clerk Google-only login
+
+Configure a Clerk application for your domain. Enable Google and disable email, phone, username, password, passkeys, biometric and wallet sign-in/signup. Production Google OAuth credentials and Clerk DNS records must be configured in the provider dashboards.
+
+Set `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, private `CLERK_SECRET_KEY` and `CLERK_ISSUER` in `.env.server`. `APP_PUBLIC_URL` must exactly match the origin including its port; Compose uses it as the backend authorized party. The public key is embedded when building Next.js, so rebuild the frontend after changing it. The secret is runtime-only and must never have a `NEXT_PUBLIC_` prefix.
+
+On an upgrade, set `CLERK_LEGACY_OWNER_EMAIL` to the verified Google email that owns the old `owner` archive. After its first successful sign-in, the archive remains bound to that Clerk subject. New installations leave this empty. Account quotas are configurable through `DEFAULT_USER_STORAGE_BYTES`, `DEFAULT_USER_DAILY_DOWNLOADS`, and `DEFAULT_USER_QUEUE_LIMIT` before account creation.
+
 ## 3. Start through an SSH tunnel
 
 The default configuration binds the gateway to `127.0.0.1:8088`. PostgreSQL has no
 public port; only the application containers join its private network.
 
 ```sh
-COMPOSE_PARALLEL_LIMIT=1 deploy/server.sh build web worker
+COMPOSE_PARALLEL_LIMIT=1 deploy/server.sh build web worker frontend
 deploy/server.sh up -d db
 deploy/server.sh run --rm web python manage.py migrate --noinput
-deploy/server.sh run --rm web python manage.py createsuperuser
-deploy/server.sh up -d web worker gateway
+deploy/server.sh up -d web worker frontend gateway
 deploy/server.sh ps
 curl --fail http://127.0.0.1:8088/healthz/
 ```
@@ -63,7 +70,7 @@ From your computer, forward the loopback port:
 ssh -N -L 8088:127.0.0.1:8088 USER@YOUR_SERVER
 ```
 
-Then open `http://127.0.0.1:8088`. Create only one application owner.
+Then open `http://127.0.0.1:8088` with Clerk development keys, or use the configured HTTPS origin with production keys. Google sign-in provisions each account.
 Do not publish loopback HTTP to the internet. Public origins require HTTPS.
 
 ## 4. Optional independent HTTPS listener
@@ -85,7 +92,7 @@ using ports 80 and 443. To use the provided Let's Encrypt webroot flow:
 ```sh
 deploy/server.sh run --rm --no-deps certbot certonly --non-interactive \
   --agree-tos --email YOUR_EMAIL --webroot -w /var/www/certbot -d YOUR_DOMAIN
-deploy/server.sh up -d web worker gateway
+deploy/server.sh up -d web worker frontend gateway
 curl --fail https://archive.example.com:8443/healthz/
 deploy/server.sh run --rm --no-deps certbot renew --dry-run --no-random-sleep-on-renew
 ```
@@ -101,9 +108,9 @@ configured for your infrastructure rather than using the independent overlay.
 ```sh
 cd /opt/halekhoob
 deploy/server.sh ps
-deploy/server.sh logs --tail=100 web worker gateway
+deploy/server.sh logs --tail=100 web worker frontend gateway
 deploy/server.sh restart worker
-deploy/server.sh exec web python manage.py changepassword USERNAME
+deploy/server.sh logs --tail=50 frontend
 ```
 
 Keep separate bucket-scoped web and worker keys. The PostgreSQL application role
@@ -125,10 +132,10 @@ git log --oneline HEAD..origin/main
 git rev-parse HEAD
 python3 scripts/cloud_backup.py /var/backups/halekhoob --server --full
 git pull --ff-only
-COMPOSE_PARALLEL_LIMIT=1 deploy/server.sh build web worker
+COMPOSE_PARALLEL_LIMIT=1 deploy/server.sh build web worker frontend
 deploy/server.sh stop worker
 deploy/server.sh run --rm web python manage.py migrate --noinput
-deploy/server.sh up -d web worker gateway
+deploy/server.sh up -d web worker frontend gateway
 deploy/server.sh ps
 ```
 

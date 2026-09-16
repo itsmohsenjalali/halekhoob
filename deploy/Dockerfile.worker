@@ -4,15 +4,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=javascript /usr/local/bin/node /usr/local/bin/node
 WORKDIR /app
-COPY requirements-worker.txt ./
+COPY backend/requirements-worker.txt ./
 RUN pip install --no-cache-dir -r requirements-worker.txt
-COPY config ./config
-COPY library ./library
-COPY templates ./templates
-COPY static ./static
-COPY theme ./theme
-COPY tokens.css ./
-COPY manage.py ./
+COPY backend/config ./config
+COPY backend/library ./library
+COPY backend/templates ./templates
+COPY backend/static ./static
+COPY backend/theme ./theme
+COPY backend/tokens.css ./
+COPY backend/manage.py ./
 RUN useradd --create-home --uid 10001 archive && mkdir /data && chown archive:archive /data
 USER archive
 ENV DATA_DIR=/data

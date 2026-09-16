@@ -1,12 +1,5 @@
-[tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "config.settings"
-python_files = ["test_*.py"]
-testpaths = ["tests"]
-
 [tool.ruff]
-target-version = "py312"
-line-length = 100
+extend = "backend/pyproject.toml"
 
-[tool.ruff.lint]
-select = ["E", "F", "I"]
-ignore = ["E501"]
+[tool.ruff.lint.per-file-ignores]
+"scripts/smoke_downloads.py" = ["E402"]

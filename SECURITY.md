@@ -12,8 +12,8 @@ any suggested fix. This is a personal project; response times are not guaranteed
 
 ## Deployment boundaries
 
-- This application is designed for one owner, not public registration or a
-  multi-tenant service. Mood management is shared between accounts.
+- Each archive and category belongs to an internal user linked to a verified Clerk
+  Google identity. Configure an exact authorized origin and Google-only sign-in.
 - Keep PostgreSQL private and R2 public access disabled. Use distinct bucket-scoped
   read-only web and read/write worker credentials.
 - R2 URLs are temporary bearer links: anyone with a still-valid signed URL can

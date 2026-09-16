@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, "feat/**"]
   pull_request:
   workflow_dispatch:
 
@@ -32,13 +32,16 @@ jobs:
       DJANGO_DEBUG: "1"
       DATA_DIR: /tmp/halekhoob-test-data
       DATABASE_URL: ${{ matrix.database == 'postgres' && 'postgresql://test:test@127.0.0.1:5432/halekhoob_test' || '' }}
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: requirements*.txt
+          cache-dependency-path: backend/requirements*.txt
       - uses: actions/setup-node@v5
         with:
           node-version: "22"
@@ -48,7 +51,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
           python -m pip install -r requirements-dev.in
-      - run: ruff check .
+      - run: ruff check ..
       - run: pytest -q
       - run: python manage.py makemigrations --check --dry-run
       - run: node --test tests/audio-renewal.test.cjs
@@ -59,3 +62,22 @@ jobs:
       - uses: actions/checkout@v5
       - run: docker build -f deploy/Dockerfile.web -t halekhoob-web:ci .
       - run: docker build -f deploy/Dockerfile.worker -t halekhoob-worker:ci .
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_Y2xlcmsuZXhhbXBsZS5jb20k
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build

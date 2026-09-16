@@ -6,13 +6,13 @@ Install the development requirements from an activated Python 3.12 environment.
 FFmpeg/FFprobe and Node.js 22 must be available on `PATH`.
 
 ```sh
-python -m pip install -r requirements-dev.in
+python -m pip install -r backend/requirements-dev.in
 export DJANGO_DEBUG=1
 export DATA_DIR="$(mktemp -d)"
-pytest -q
+(cd backend && pytest -q)
 ruff check .
-python manage.py makemigrations --check --dry-run
-node --test tests/audio-renewal.test.cjs
+python backend/manage.py makemigrations --check --dry-run
+(cd backend && node --test tests/audio-renewal.test.cjs)
 ```
 
 The temporary `DATA_DIR` avoids creating data in the source tree. Test fixtures
@@ -46,3 +46,12 @@ platforms, a new `--data-dir`, and a `--report` destination. It deliberately ref
 cloud database/storage configuration. Keep source-link lists and resulting reports
 private. Platform availability varies with source permissions, IP and extractor
 version; passing deterministic CI does not prove live download availability.
+
+
+## Multi-user acceptance
+
+Use two independent Google accounts. Save the same source URL in each; verify independent categories, favorites and notes. Attempt to read, edit, retry, download or inject the other account's IDs and expect 404/400. Confirm logged-out requests return 401 and expired/wrong-origin JWTs fail. Verify a fresh user starts with an empty archive and personal default categories.
+
+Check the pre-existing owner archive after its configured verified Google account signs in. Confirm attachment downloads return the stored file and seeking works. Change filters while loading more videos; only the current filter may appear. Favorite a playing video without resetting playback. Exercise continuous audio, next/previous, expired URL renewal, hidden tabs and a real phone's lock screen.
+
+Run frontend `npm run typecheck` and `npm run build`. Run the complete backend suite in Linux with working FFmpeg for SQLite and PostgreSQL. Migration and backup tests must use disposable databases, never production.

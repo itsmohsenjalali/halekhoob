@@ -21,3 +21,8 @@ backups
 *.p12
 *.dump
 *.log
+**/node_modules
+**/.next
+**/.env*
+**/.pytest_cache
+**/.ruff_cache

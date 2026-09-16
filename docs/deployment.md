@@ -1,3 +1,7 @@
+# Legacy deployment reference
+
+For the current Next.js/Clerk stack use [Docker server deployment](server-deployment.md). This document describes the earlier Django-only installation.
+
 # راه‌اندازی روی Oracle Always Free
 
 این راهنما برای **یک ماشین تازهٔ Ubuntu 24.04** و حسابی است که به Pay As You Go ارتقا پیدا نکرده باشد. هزینهٔ صفر به باقی‌ماندن همهٔ منابع در سهمیه و ظرفیت قابل تخصیص Oracle وابسته است؛ اعتبار آزمایشی مبنای برنامه نیست.

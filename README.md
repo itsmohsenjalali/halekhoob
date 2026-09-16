@@ -1,111 +1,83 @@
-# Halekhoob · حال‌خوب
+# حال‌خوب · Halekhoob
 
-A self-hosted, private video library organized by how you want to feel.
-Save public YouTube and Instagram video links, tag them with moods, and revisit
-local copies in a Persian, right-to-left timeline.
-
-[راهنمای فارسی](README.fa.md) · [Server deployment](docs/server-deployment.md) ·
-[Architecture](docs/architecture.md) · [Contributing](CONTRIBUTING.md)
+A self-hosted Persian video archive organized by how you want to feel. Each user signs in with Google and keeps their own videos, categories, notes and favorites.
 
 ## Features
 
-- Inline, mobile-friendly timeline with mood filters, search and favorites.
-- Viewport autoplay with in-video playback and sound controls.
-- Continuous audio playlist for the current selection, with media-session controls.
-- Durable background downloads, duplicate detection, progress and retry handling.
-- Private playback and seeking; local files or signed Cloudflare R2 URLs.
-- Portable backups with checksums, restore commands and scheduled server backups.
-- Self-hosted fonts and no analytics or AI processing.
+- Separate **Next.js / React / TypeScript frontend** and **Django JSON API**.
+- **Clerk Google-only authentication** with server-side JWT validation and independent user archives.
+- Responsive RTL timeline: visible videos autoplay muted, with inline pause and sound controls.
+- Filter by category, search, favorite, edit and delete without leaving the timeline.
+- Continuous audio playlist with Media Session controls and expiring-link renewal. Background and lock-screen playback depend on the browser and OS; an initial user gesture can be required.
+- Download the archived video or audio to your device using a short-lived attachment URL.
+- Durable PostgreSQL download queue, retries, per-user quotas and fair scheduling.
+- Private **Cloudflare R2 Standard** media storage; separate read-only web and read/write worker credentials.
+- Docker deployment beside an existing website, plus portable backup and restore tools.
 
-## Stack
-
-Python 3.12 · Django 5.2 · vanilla JavaScript · yt-dlp · FFmpeg · Node.js 22.
-Use SQLite and local media for development, or Docker with PostgreSQL 17 and a
-private **Cloudflare R2 Standard** bucket for a server deployment. The web app
-and downloader are separate processes; downloads require a persistent worker.
-
-## Quick start
-
-Install Python 3.12, FFmpeg (including `ffprobe`) and Node.js 22, then:
-
-```sh
-git clone https://github.com/itsmohsenjalali/halekhoob.git
-cd halekhoob
-python3.12 -m venv .venv
-. .venv/bin/activate
-python -m pip install -r requirements-worker.txt
-export DJANGO_DEBUG=1
-python manage.py migrate
-python manage.py createsuperuser
-python manage.py runserver 127.0.0.1:8000
-```
-
-In another terminal in the same directory:
-
-```sh
-. .venv/bin/activate
-export DJANGO_DEBUG=1
-python manage.py runworker
-```
-
-Open **http://127.0.0.1:8000**. There is no public registration. Create only one
-owner account. Local data is stored in the ignored `data/` directory. The app
-reads process environment variables; it does **not** automatically load `.env`.
-Allow at least 3.5 GB of free working space with the default download settings.
-Use [Docker deployment](docs/server-deployment.md) for public access.
-
-## Repository layout
+## Architecture
 
 ```text
-config/       Django settings and entry points
-library/      Models, views, downloads, storage, migrations and commands
-templates/    Persian RTL pages and timeline fragments
-static/       JavaScript, CSS and licensed fonts
-theme/        Shared design-token asset
-tests/        Python and JavaScript tests
-scripts/      Backup, configuration and manual acceptance tools
-deploy/       Docker, Nginx, environment examples and systemd services
-docs/         Architecture, testing and deployment guides
-.github/      CI and contribution templates
+Browser → Nginx → Next.js + Clerk
+               → Django API → PostgreSQL
+Browser → signed private R2 URL
+Download worker → yt-dlp / FFmpeg → R2 Standard
 ```
 
-Secrets, personal media, databases and deployment reports are not part of the
-repository. Copy the configuration examples and provide your own credentials.
+```text
+frontend/     Next.js application, Persian UI and media players
+backend/      Django API, models, migrations, worker and backend tests
+scripts/      Backup, restore verification and isolated download smoke checks
+deploy/       Dockerfiles, Compose, Nginx and operational examples
+docs/         Architecture, API, deployment and testing guides
+```
 
-## Server installation
+The old Django templates remain available only with both `DJANGO_DEBUG=1` and `LEGACY_UI_ENABLED=1` for development regression testing. Production serves the Next.js UI and accepts Clerk credentials for the API.
 
-Follow [the Docker + PostgreSQL + R2 guide](docs/server-deployment.md). The Compose
-stack contains a web app, worker, private database and gateway. It can run beside
-an existing website using a separate port. A legacy bare-metal Oracle guide is
-available in [docs/deployment.md](docs/deployment.md); its infrastructure quotas
-must be checked before use.
+## Run locally
 
-## Limits and playback behavior
+Use Python 3.12, Node.js 22 and FFmpeg. Create a Clerk **development** instance with Google enabled and all other sign-in/sign-up methods disabled. Production Clerk keys are domain-bound; do not use them for localhost development.
 
-- Intended for a **single owner**, not a multi-tenant public service.
-- Public, single videos only: up to 20 minutes, 500 MB and 720p. No cookies,
-  private content, livestreams, playlists or multi-item posts.
-- Public sources can still reject downloads or require login from a server IP.
-  Failed downloads retain their link and tags for retry.
-- Video autoplay starts muted and pauses outside the viewport or in a hidden tab.
-  Continuous audio mode keeps playing across tab changes. Lock-screen playback
-  and automatic advancement depend on the browser and operating system; closing
-  the tab ends the playlist. Real-device lock-screen support is not guaranteed.
-- Local playback requires authentication. R2 redirects use expiring signed links;
-  anyone holding an unexpired link can access that object.
-- Only download media you have permission to retain. The MIT code license does
-  not license third-party videos. No sample archive or account is included.
-- R2, compute, backups and traffic may incur provider charges. The application's
-  storage cap is configurable; it is not a cloud billing limit.
+```sh
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -r backend/requirements-dev.in
+export DJANGO_DEBUG=1
+export DATA_DIR=/tmp/halekhoob-development
+export CLERK_ISSUER=https://YOUR-DEVELOPMENT-INSTANCE.clerk.accounts.dev
+export CLERK_SECRET_KEY=YOUR_PRIVATE_DEVELOPMENT_KEY
+export CLERK_AUTHORIZED_PARTIES=http://localhost:3000
+python backend/manage.py migrate
+python backend/manage.py runserver 127.0.0.1:8000
+```
 
-## Development and testing
+In another terminal with the same backend environment, run `python backend/manage.py runworker`. Then configure and start the frontend:
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) and [the test guide](docs/testing.md).
-CI runs Python tests with SQLite and PostgreSQL, JavaScript audio tests, lint,
-migration checks and both Docker builds. Real-platform downloads are tested
-separately without production credentials.
+```sh
+cd frontend
+cp .env.example .env.local
+# Fill the Clerk development publishable and secret keys in .env.local.
+npm ci
+npm run dev
+```
 
-## License and security
+Open `http://localhost:3000` and sign in with Google. Accounts and six personal categories are created on first authenticated API use. No Django password or superuser is needed. Never commit private environment files, archives or credentials.
 
-[MIT](LICENSE), with [separate font notices](THIRD_PARTY_NOTICES.md).
-Please report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+## Server deployment
+
+Follow [the Docker server guide](docs/server-deployment.md). The stack contains Next.js, Django, a worker, PostgreSQL and its own Nginx gateway. The optional HTTPS listener uses port 8443 so a different site can retain ports 80/443. PostgreSQL and R2 stay private.
+
+For an existing installation, take a full backup before migration. Set `CLERK_LEGACY_OWNER_EMAIL` privately to the verified Google email that owns the old `owner` archive. Its first authenticated request claims that archive once; other users receive empty archives. Existing media keys remain valid.
+
+## Limits
+
+- Public individual YouTube/Instagram videos only: up to 20 minutes, 500 MB and 720p. No source-account cookies, private content, livestreams or playlists.
+- Defaults: 1 GB per new user, five source download attempts per UTC day and five queued jobs. Reservations include conversion headroom; existing migrated users retain an 8 GB limit. Configure defaults before signup; existing account limits are stored in the database.
+- Global archive cap also applies. Deleted R2 objects count against storage until delayed deletion completes.
+- Platform availability varies by source, server IP and extractor support. Download only media you are entitled to save.
+- Self-hosting and third-party providers have their own costs and quotas; this repository does not guarantee free hosting.
+
+See [architecture and API](docs/architecture.md), [testing](docs/testing.md), [contributing](CONTRIBUTING.md) and [security](SECURITY.md).
+
+## License
+
+[MIT](LICENSE). Bundled fonts retain their accompanying SIL Open Font Licenses.

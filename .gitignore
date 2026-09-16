@@ -28,3 +28,10 @@ backups/
 .coverage*
 htmlcov/
 links.txt
+node_modules/
+.next/
+*.tsbuildinfo
+playwright-report/
+test-results/
+
+!frontend/.env.example

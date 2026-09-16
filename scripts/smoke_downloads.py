@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# ruff: noqa: E402
 """Run on the target server with a text file containing ten real public source URLs.
 
 Uses a separate DATA_DIR and the real downloader. Never touches the personal library.
@@ -24,7 +23,7 @@ if os.environ.get("DATABASE_URL") or os.environ.get("MEDIA_BACKEND", "local") !=
         "Use a separate cloud test database and bucket for cloud acceptance tests."
     )
 root = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(root))
+sys.path.insert(0, str(root / "backend"))
 directory = Path(args.data_dir).resolve()
 if directory.exists():
     raise SystemExit("Use a NEW isolated data directory for the smoke test.")
@@ -37,7 +36,6 @@ django.setup()
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.utils import timezone
-
 from library.models import Mood, Video
 from library.validation import canonical_source
 from library.worker import work

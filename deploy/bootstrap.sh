@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Run only on a fresh Ubuntu 24.04 Always Free VM, AFTER mounting the data volume.
 set -euo pipefail
+echo "Legacy Django-only bootstrap. Use deploy/server.sh for the Next.js/Clerk stack." >&2
+exit 1
 umask 022
 if [[ $EUID -ne 0 ]]; then echo 'Run with sudo.' >&2; exit 1; fi
 SITE_HOST=${1:?Usage: sudo bash deploy/bootstrap.sh archive.PUBLIC_IP.sslip.io}
@@ -17,7 +19,7 @@ if [[ "$SOURCE_DIR" != /opt/motivation/app ]]; then
 fi
 chmod 0755 /opt/motivation/app/deploy/manage.sh
 python3.12 -m venv /opt/motivation/venv
-/opt/motivation/venv/bin/pip install --no-cache-dir -r /opt/motivation/app/requirements-worker.txt
+/opt/motivation/venv/bin/pip install --no-cache-dir -r /opt/motivation/app/backend/requirements-worker.txt
 # Official Node distribution, verified against its published SHA256 list.
 NODE_VERSION=v22.23.2
 case "$(uname -m)" in aarch64) NODE_ARCH=arm64;; x86_64) NODE_ARCH=x64;; *) exit 1;; esac

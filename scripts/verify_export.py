@@ -58,7 +58,7 @@ def verify(source):
                 raise ValueError("Missing portable database")
             payload = json.loads(json_path.read_text())
             if not isinstance(payload, list) or any(
-                row.get("model") not in {"auth.user", "auth.group", "library.video", "library.mood"}
+                row.get("model") not in {"auth.user", "auth.group", "library.video", "library.mood", "library.account", "library.dailyusage"}
                 for row in payload
             ):
                 raise ValueError("Invalid portable database")

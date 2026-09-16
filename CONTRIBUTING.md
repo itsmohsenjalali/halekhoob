@@ -9,13 +9,13 @@ behavior and a small example without private archive data.
 Follow the [quick start](README.md#quick-start), then install development tools:
 
 ```sh
-python -m pip install -r requirements-dev.in
+python -m pip install -r backend/requirements-dev.in
 export DJANGO_DEBUG=1
 export DATA_DIR="$(mktemp -d)"
-pytest -q
+(cd backend && pytest -q)
 ruff check .
-python manage.py makemigrations --check --dry-run
-node --test tests/audio-renewal.test.cjs
+python backend/manage.py makemigrations --check --dry-run
+(cd backend && node --test tests/audio-renewal.test.cjs)
 ```
 
 Use Python 3.12, FFmpeg/FFprobe and Node.js 22. Keep test data separate from your
@@ -39,3 +39,5 @@ Changes to locked dependencies should update their corresponding `.in` files and
 be tested with Python 3.12. Do not enable unattended production deployment from
 pull requests. Contributions are submitted under the project's MIT license;
 preserve third-party notices.
+
+Frontend checks: `cd frontend && npm ci && npm run typecheck && npm run build`. Use a Clerk development publishable key for local builds and development secrets only in ignored environment files.
