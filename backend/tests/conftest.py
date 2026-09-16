@@ -11,6 +11,7 @@ from library.models import Mood, Video
 
 @pytest.fixture(autouse=True)
 def isolated_storage(settings, tmp_path):
+    settings.LEGACY_UI_ENABLED = True
     settings.DATA_DIR = tmp_path / "data"
     settings.DATA_DIR.mkdir()
     settings.MEDIA_ROOT = settings.DATA_DIR / "media"
