@@ -1151,3 +1151,4 @@ progress::-moz-progress-bar {
 .admin-history small { width: 100%; color: #696d5e; }
 @media (max-width: 850px) { .admin-stats { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (max-width: 600px) { .admin-page { padding: 16px 14px 40px; } .admin-header { gap: 10px; flex-wrap: wrap; } .admin-back { font-size: 12px; } .admin-header .brand { font-size: 19px; } .admin-users { grid-template-columns: minmax(0,1fr); } .admin-stats { gap: 10px; } .admin-stats article { padding: 14px; } .admin-stats article strong { font-size: 18px; } .admin-user { padding: 16px; } .admin-quota-input { gap: 8px; } .admin-page button { padding: 8px 10px; } }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
