@@ -105,7 +105,7 @@ export default function VideoCard({
           />
           <button
             className="video-touch"
-            aria-label={paused || playFailed ? "پخش ویدیو" : "توقف ویدیو"}
+            aria-label={!active || paused || playFailed ? "پخش ویدیو" : "توقف ویدیو"}
             onClick={() => {
               if (!active) {
                 resumeVideo(video.id);
@@ -120,7 +120,7 @@ export default function VideoCard({
               } else setPaused(!paused);
             }}
           >
-            {(paused || playFailed) && (
+            {(!active || paused || playFailed) && (
               <span className="play-overlay">
                 <Play size={32} fill="currentColor" />
               </span>
