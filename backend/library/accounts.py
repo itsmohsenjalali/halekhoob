@@ -23,8 +23,6 @@ def ensure_account(user):
         user=user,
         defaults={
             "storage_limit": settings.DEFAULT_USER_STORAGE_BYTES,
-            "daily_download_limit": settings.DEFAULT_USER_DAILY_DOWNLOADS,
-            "queue_limit": settings.DEFAULT_USER_QUEUE_LIMIT,
         },
     )
     if created:

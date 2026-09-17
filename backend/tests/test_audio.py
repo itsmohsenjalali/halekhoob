@@ -149,7 +149,8 @@ def test_backfill_quota_preserves_original(video, settings, audio_source):
     (settings.MEDIA_ROOT / video.file_name).write_bytes(original)
     video.size_bytes = len(original)
     video.save()
-    settings.ARCHIVE_MAX_BYTES = len(original)
+    video.owner.archive_account.storage_limit = len(original)
+    video.owner.archive_account.save()
     with pytest.raises(CommandError):
         call_command("prepare_audio")
     video.refresh_from_db()

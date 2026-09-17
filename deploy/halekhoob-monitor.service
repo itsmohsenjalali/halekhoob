@@ -1,0 +1,13 @@
+[Unit]
+Description=Halekhoob host metrics snapshot
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/halekhoob/scripts/collect_host_metrics.py
+TimeoutStartSec=40
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/halekhoob-monitor

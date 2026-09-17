@@ -43,7 +43,7 @@ def unpack(source, root):
         raise CommandError("Missing database.")
     payload = json.loads((root / "database.json").read_text())
     if any(
-        row["model"] not in {"auth.user", "auth.group", "library.mood", "library.video", "library.account", "library.dailyusage"}
+        row["model"] not in {"auth.user", "auth.group", "library.mood", "library.video", "library.account", "library.dailyusage", "library.quotachange"}
         for row in payload
     ):
         raise CommandError("Unexpected model in backup.")
@@ -93,8 +93,6 @@ class Command(BaseCommand):
             root = Path(directory).resolve()
             try:
                 manifest = unpack(options["source"], root)
-                if sum(asset["size"] for asset in manifest["assets"]) > settings.ARCHIVE_MAX_BYTES:
-                    raise CommandError("Backup exceeds archive quota.")
                 with Lease() as lease:
                     mapping = []
                     for asset in manifest["assets"]:
@@ -116,10 +114,6 @@ class Command(BaseCommand):
                             key = f"{settings.R2_PREFIX}/media/{asset['video']}/{manifest['id']}/{path.name}"
                         with archive_lock():
                             lease.check(locked=True)
-                            if not CloudObject.objects.filter(key=key).exists() and (
-                                r2.stored_bytes() + asset["size"] > settings.ARCHIVE_MAX_BYTES
-                            ):
-                                raise CommandError("Import plus retained objects exceeds quota.")
                             record, created = CloudObject.objects.get_or_create(
                                 key=key,
                                 defaults={"size_bytes": asset["size"], "sha256": asset["sha256"]},
@@ -136,6 +130,13 @@ class Command(BaseCommand):
                         # Seed moods are recreated from the backup with original IDs.
                         Mood.objects.all().delete()
                         payload = json.loads((root / "database.json").read_text())
+                        # Account count caps were removed; accept backups from earlier releases.
+                        for row in payload:
+                            if row['model'] == 'library.account':
+                                row['fields'].pop('daily_download_limit', None)
+                                row['fields'].pop('queue_limit', None)
+                            if row['model'] == 'library.video':
+                                row['fields']['reserved_bytes'] = 0
                         # Older backups have global moods. Assign/clone them to each video owner.
                         users = [row for row in payload if row['model'] == 'auth.user']
                         next_id = max([row['pk'] for row in payload if row['model'] == 'library.mood'] or [0]) + 1

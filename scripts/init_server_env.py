@@ -52,7 +52,7 @@ def main():
         "R2_WORKER_ACCESS_KEY_ID": worker["R2_ACCESS_KEY_ID"],
         "R2_WORKER_SECRET_ACCESS_KEY": worker["R2_SECRET_ACCESS_KEY"],
         "R2_URL_TTL": "3600",
-        "ARCHIVE_MAX_BYTES": "8000000000",
+        "DEFAULT_USER_STORAGE_BYTES": "1000000000",
         "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": "",
         "CLERK_SECRET_KEY": "",
         "CLERK_ISSUER": "",

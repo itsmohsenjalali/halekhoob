@@ -15,7 +15,7 @@ def emit(event, **values):
     print(json.dumps({"event": event, **values}, ensure_ascii=False), flush=True)
 
 
-def download(url, output_dir, max_bytes, max_seconds):
+def download(url, output_dir, max_bytes):
     install_network_guard()
     import yt_dlp
 
@@ -34,11 +34,8 @@ def download(url, output_dir, max_bytes, max_seconds):
     def match_filter(info, *, incomplete=False):
         if info.get("is_live") or info.get("live_status") in {"is_live", "is_upcoming"}:
             return "ARCHIVE_LIMIT_LIVE"
-        duration = info.get("duration")
-        if duration and duration > max_seconds:
-            return "ARCHIVE_LIMIT_DURATION"
-        # Instagram's public fallback can omit duration. Download remains size/time bounded;
-        # ffprobe must establish and enforce duration before the worker publishes anything.
+        if info.get("filesize", 0) and info["filesize"] > max_bytes:
+            return "ARCHIVE_LIMIT_SIZE"
         return None
 
     class QuietLogger:
@@ -108,10 +105,9 @@ def main():
     parser.add_argument("url")
     parser.add_argument("output_dir")
     parser.add_argument("--max-bytes", type=int, required=True)
-    parser.add_argument("--max-seconds", type=int, required=True)
     args = parser.parse_args()
     try:
-        download(args.url, args.output_dir, args.max_bytes, args.max_seconds)
+        download(args.url, args.output_dir, args.max_bytes)
     except Exception as exc:
         emit("error", message=str(exc)[-2000:])
         sys.exit(1)

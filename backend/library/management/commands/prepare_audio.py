@@ -7,6 +7,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
+from library import quota
 from library.audio import extract_audio
 from library.models import Video
 from library.storage import archive_lock, private_path
@@ -36,10 +37,12 @@ class Command(BaseCommand):
                         source = private_path(video.file_name)
                         ensure_capacity(source.stat().st_size)
                         with tempfile.TemporaryDirectory(dir=settings.DATA_DIR) as directory:
-                            audio = extract_audio(source, Path(directory))
+                            audio = extract_audio(source, Path(directory), quota.budget(video))
                             if audio:
                                 size = audio.stat().st_size
                                 ensure_capacity(size)
+                                with transaction.atomic():
+                                    quota.ensure_publish(video, size)
                                 destination = settings.MEDIA_ROOT / f"{video.pk}.m4a"
                                 os.replace(audio, destination)
                                 video.audio_name = destination.name

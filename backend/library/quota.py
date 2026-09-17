@@ -1,6 +1,5 @@
-"""Atomic per-account admission and conservative storage reservations."""
+"""Per-account storage admission and final publication checks."""
 
-from django.conf import settings
 from django.db.models import F, Sum
 from django.utils import timezone
 
@@ -36,32 +35,31 @@ def admit(user, exclude=None):
     """Caller holds archive_lock(exclusive=True) and a database transaction."""
     ensure_account(user)
     account = Account.objects.select_for_update().get(user=user)
-    queue = Video.objects.filter(owner=user, status__in=["queued", "downloading"])
-    if exclude is not None:
-        queue = queue.exclude(pk=exclude)
-    if queue.count() >= account.queue_limit:
-        raise QuotaError("صف دریافتت پر است؛ منتظر پایان ویدیوهای قبلی بمان.")
+    if used(user) >= account.storage_limit:
+        raise QuotaError("فضای حسابت پر شده؛ برای دریافت تازه فضا آزاد کن یا از مدیر سهمیهٔ بیشتری بخواه.")
     usage, _ = DailyUsage.objects.get_or_create(owner=user, day=timezone.now().date())
-    if usage.downloads >= account.daily_download_limit:
-        raise QuotaError("به سقف دریافت روزانه رسیده‌ای؛ فردا دوباره تلاش کن.")
-    amount = settings.MAX_VIDEO_BYTES + settings.MAX_VIDEO_SECONDS * 20_000 + 1_000_000
-    if used(user) + reserved(user, exclude) + amount > account.storage_limit:
-        raise QuotaError("فضای آزاد حسابت برای دریافت یک ویدیوی جدید کافی نیست.")
-    if used() + reserved(exclude=exclude) + amount > settings.ARCHIVE_MAX_BYTES:
-        raise QuotaError("ظرفیت دریافت سرور تکمیل شده؛ بعداً دوباره تلاش کن.")
     usage.downloads += 1
     usage.save(update_fields=["downloads"])
-    return amount
+    # Sizes are unknown until extraction. The single worker budgets at execution,
+    # then rechecks the current account quota atomically before publication.
+    return 0
+
+
+def budget(video):
+    from .worker import JobError
+
+    available = ensure_account(video.owner).storage_limit - used(video.owner)
+    if available <= 0:
+        raise JobError("quota", "فضای حسابت برای دریافت تازه کافی نیست.")
+    return available
 
 
 def ensure_publish(video, size):
     from .worker import JobError
 
-    account = ensure_account(video.owner)
-    if used(video.owner) + reserved(video.owner, video.pk) + size > account.storage_limit:
+    account = Account.objects.select_for_update().get(user=video.owner)
+    if used(video.owner) + size > account.storage_limit:
         raise JobError("quota", "فضای حساب برای ذخیرهٔ خروجی کافی نیست.")
-    if used() + reserved(exclude=video.pk) + size > settings.ARCHIVE_MAX_BYTES:
-        raise JobError("quota", "ظرفیت کلی آرشیو برای این خروجی کافی نیست.")
 
 
 def next_job(query):

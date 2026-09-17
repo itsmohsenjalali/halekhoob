@@ -12,7 +12,7 @@ All paths below start with `/api/v1/` and require `Authorization: Bearer <Clerk 
 
 | Method | Path | Result |
 | --- | --- | --- |
-| GET | `me/` | Profile, stored/reserved bytes and daily/queue limits |
+| GET | `me/` | Profile, storage quota and staff flag |
 | GET, POST | `categories/` | List or create personal categories |
 | PATCH, DELETE | `categories/{id}/` | Rename/update or remove a category; preserve videos |
 | GET, POST | `videos/` | Paginated archive or enqueue a source URL |
@@ -26,7 +26,7 @@ List and playlist accept `category`, `q`, and `filter=favorites`; list also supp
 
 ## Queue and storage
 
-Admission locks the archive and account, reserves conversion space, checks global/per-user storage and queue caps, and increments daily usage atomically. A single worker uses durable PostgreSQL leases and job tokens. It chooses the least recently served active account, then the next eligible job. Failed uploads remain in the object journal for cleanup; finished and failed jobs release reservations, automatic retries retain them.
+Admission locks the archive and account, checks for remaining per-user storage and increments daily usage for statistics, without count limits. File sizes are unknown at admission; the worker computes a byte budget from remaining storage and rechecks the account quota at publication. Staff updates share the same archive lock, so a quota reduction during upload prevents publication beyond the new limit. A single worker uses durable PostgreSQL leases and job tokens. It chooses the least recently served active account, then the next eligible job. Failed uploads remain in the object journal for cleanup; jobs no longer reserve a fixed file size while queued.
 
 The worker validates media before marking a video ready. R2 uploads explicitly use Standard storage and private object keys. Playback and downloads use expiring signed URLs; attachment responses carry Content-Disposition. These URLs are temporary bearer credentials, valid until expiry even after logout. Deletion is deferred to preserve backup recoverability and counts toward quotas until objects are removed.
 
@@ -37,3 +37,5 @@ The Next.js timeline chooses the most visible card for autoplay and pauses video
 Portable exports include users, account mappings, daily usage, personal categories, videos and object metadata. Full exports also contain media. The importer accepts older single-owner exports and assigns category/object ownership. Restore into an empty migrated database with workers stopped. Existing Clerk subject mappings require the same Clerk instance on restore; another instance needs a deliberate identity migration.
 
 Migration 0005 assigns legacy global categories to their users, adds accounts and object ownership, and changes source deduplication to per-user uniqueness. It is not automatically reversible; restore a pre-upgrade backup to roll back.
+
+Staff-only endpoints under `admin/` provide overview, paginated/searchable users and `PATCH users/<id>/quota/`. Quota changes are persisted for audit and portable backups. Host resource snapshots come from a host-side timer and a read-only directory mount, never the Docker socket.

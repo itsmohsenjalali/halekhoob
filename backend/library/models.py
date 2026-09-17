@@ -101,8 +101,6 @@ class Account(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="archive_account")
     clerk_id = models.CharField(max_length=100, unique=True, null=True, blank=True)
     storage_limit = models.PositiveBigIntegerField(default=1_000_000_000)
-    daily_download_limit = models.PositiveIntegerField(default=5)
-    queue_limit = models.PositiveIntegerField(default=5)
     last_served_at = models.DateTimeField(null=True, blank=True)
 
 
@@ -113,3 +111,11 @@ class DailyUsage(models.Model):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["owner", "day"], name="usage_owner_day_unique")]
+
+
+class QuotaChange(models.Model):
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="quota_changes_made")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="quota_changes")
+    old_limit = models.PositiveBigIntegerField()
+    new_limit = models.PositiveBigIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)

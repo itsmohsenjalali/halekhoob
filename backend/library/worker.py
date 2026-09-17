@@ -1,6 +1,7 @@
 import fcntl
 import json
 import logging
+import math
 import os
 import shutil
 import signal
@@ -32,10 +33,8 @@ class JobError(Exception):
 
 def explain_error(raw):
     text = raw.lower()
-    if "archive_limit_duration" in text or "archive_limit_unknown_duration" in text:
-        return JobError("duration", "مدت ویدیو باید مشخص و حداکثر ۲۰ دقیقه باشد.")
     if "archive_limit_size" in text or "larger than max" in text or "max-filesize" in text:
-        return JobError("size", "حجم این ویدیو از سقف ۵۰۰ مگابایت بیشتر است.")
+        return JobError("size", "حجم ویدیو از فضای باقی‌ماندهٔ حسابت بیشتر است.")
     if "archive_limit_collection" in text or "archive_limit_live" in text:
         return JobError(
             "unsupported",
@@ -96,11 +95,7 @@ def used_bytes():
 
 
 def ensure_capacity(required=None):
-    required = settings.MAX_VIDEO_BYTES if required is None else required
-    if used_bytes() + required > settings.ARCHIVE_MAX_BYTES:
-        raise JobError(
-            "quota", "فضای آرشیو کافی نیست؛ با حذف یک ویدیو فضا آزاد کن و دوباره تلاش کن."
-        )
+    required = 0 if required is None else required
     if shutil.disk_usage(settings.DATA_DIR).free < settings.MIN_FREE_BYTES + required * 3:
         raise JobError(
             "disk", "فضای آزاد سرور برای دانلود و پردازش کافی نیست؛ فایل‌های قبلی حفظ شده‌اند."
@@ -114,6 +109,7 @@ def terminate(process):
 
 
 def run_child(video, folder):
+    max_bytes = quota.budget(video)
     events_path = folder / "events.jsonl"
     command = [
         sys.executable,
@@ -122,9 +118,7 @@ def run_child(video, folder):
         video.source_url,
         str(folder),
         "--max-bytes",
-        str(settings.MAX_VIDEO_BYTES),
-        "--max-seconds",
-        str(settings.MAX_VIDEO_SECONDS),
+        str(max_bytes),
     ]
     # Do not inherit app credentials, proxies, browser cookies or arbitrary Python config.
     env = {key: os.environ[key] for key in ("PATH", "LANG", "SSL_CERT_FILE") if key in os.environ}
@@ -152,7 +146,7 @@ def run_child(video, folder):
                         "network", "زمان دریافت ویدیو تمام شد؛ دوباره تلاش می‌کنیم.", True
                     )
                 total = sum(p.stat().st_size for p in folder.iterdir() if p.is_file())
-                if total > settings.MAX_VIDEO_BYTES * 2 + 1_000_000:
+                if total > max_bytes * 2 + 1_000_000:
                     raise explain_error("ARCHIVE_LIMIT_SIZE")
                 if shutil.disk_usage(folder).free < settings.MIN_FREE_BYTES:
                     raise JobError("disk", "فضای آزاد سرور کافی نیست؛ فایل‌های قبلی حفظ شده‌اند.")
@@ -181,7 +175,7 @@ def run_child(video, folder):
             source = (folder / result["file"]).resolve()
             if source.parent != folder.resolve() or not source.is_file():
                 raise JobError("file", "فایل دانلودشده معتبر نیست.")
-            if source.stat().st_size > settings.MAX_VIDEO_BYTES:
+            if source.stat().st_size > max_bytes:
                 raise explain_error("ARCHIVE_LIMIT_SIZE")
             return source, result
         finally:
@@ -211,14 +205,27 @@ def probe(path):
         info = json.loads(result.stdout)
         duration = float(info["format"].get("duration", 0))
         video = next(s for s in info["streams"] if s["codec_type"] == "video")
-        if not 0 < duration <= settings.MAX_VIDEO_SECONDS + 1:
-            raise explain_error("ARCHIVE_LIMIT_DURATION")
+        if not math.isfinite(duration) or duration <= 0:
+            raise ValueError("Invalid duration")
         return duration, video, info["streams"]
     except (subprocess.SubprocessError, ValueError, KeyError, StopIteration):
         raise JobError("file", "فایل ویدیویی سالم دریافت نشد؛ دوباره تلاش کن.") from None
 
 
-def transcode(source, folder):
+def processing_budget(folder, requested):
+    # FFmpeg's -fs is approximate. Leave the disk reserve plus a packet margin.
+    available = shutil.disk_usage(folder).free - settings.MIN_FREE_BYTES - 1_000_000
+    if available <= 0:
+        raise JobError("disk", "فضای آزاد سرور برای پردازش کافی نیست.")
+    if requested <= 0:
+        raise explain_error("ARCHIVE_LIMIT_SIZE")
+    return min(requested, available)
+
+
+def transcode(source, folder, max_bytes=None):
+    max_bytes = settings.DEFAULT_USER_STORAGE_BYTES if max_bytes is None else max_bytes
+    requested = max_bytes
+    max_bytes = processing_budget(folder, max_bytes)
     duration, stream, streams = probe(source)
     destination = folder / "video.mp4"
     compatible = (
@@ -266,7 +273,7 @@ def transcode(source, folder):
         "-movflags",
         "+faststart",
         "-fs",
-        str(settings.MAX_VIDEO_BYTES),
+        str(max_bytes),
         "-y",
         str(destination),
     ]
@@ -281,8 +288,10 @@ def transcode(source, folder):
         actual_duration, actual_video, _ = probe(destination)
         if (
             abs(actual_duration - duration) > max(2, duration * 0.005)
-            or destination.stat().st_size >= settings.MAX_VIDEO_BYTES
+            or destination.stat().st_size >= max_bytes
         ):
+            if max_bytes < requested:
+                raise JobError("disk", "فضای آزاد سرور برای پردازش کامل کافی نیست.")
             raise explain_error("ARCHIVE_LIMIT_SIZE")
         if actual_video.get("codec_name") != "h264" or actual_video.get("height", 0) > 720:
             raise JobError("file", "فایل برای پخش در مرورگر آماده نشد.")
@@ -353,21 +362,23 @@ def process_one():
             video.save(update_fields=["status", "attempts", "error", "updated_at"])
         published = []
         try:
+            max_bytes = quota.budget(video)
             ensure_capacity()
             with tempfile.TemporaryDirectory(
                 prefix="job-", dir=settings.DATA_DIR / "work"
             ) as directory:
                 source, info = run_child(video, Path(directory))
                 Video.objects.filter(pk=video.pk).update(progress=90)
-                file, thumbnail, duration = transcode(source, Path(directory))
-                audio = extract_audio(file, Path(directory))
+                file, thumbnail, duration = transcode(source, Path(directory), max_bytes)
+                audio = extract_audio(file, Path(directory), max_bytes - file.stat().st_size - thumbnail.stat().st_size)
                 size = (
                     file.stat().st_size
                     + thumbnail.stat().st_size
                     + (audio.stat().st_size if audio else 0)
                 )
                 ensure_capacity(size)
-                quota.ensure_publish(video, size)
+                with transaction.atomic():
+                    quota.ensure_publish(video, size)
                 file_name, thumb_name = f"{video.pk}.mp4", f"{video.pk}.jpg"
                 audio_name = f"{video.pk}.m4a" if audio else ""
                 outputs = [(file, file_name), (thumbnail, thumb_name)]

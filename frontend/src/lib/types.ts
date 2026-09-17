@@ -25,8 +25,7 @@ export type Profile = {
   storage_reserved: number;
   storage_limit: number;
   daily_used: number;
-  daily_limit: number;
-  queue_limit: number;
+  is_admin: boolean;
 };
 export type Api = <T>(path: string, options?: RequestInit) => Promise<T>;
 export function bytes(n: number) {

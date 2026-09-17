@@ -44,6 +44,9 @@ def recover(lease):
 
 def publish(video, outputs, duration, source_title, lease):
     # UUID per attempt: a late worker cannot overwrite the current worker's files.
+    with archive_lock(exclusive=True):
+        lease.check(locked=True)
+        quota.ensure_publish(video, sum(path.stat().st_size for path, _, _ in outputs if path))
     attempt = uuid.uuid4().hex
     objects = []
     for path, kind, content_type in outputs:
@@ -56,8 +59,10 @@ def publish(video, outputs, duration, source_title, lease):
                 )
             objects.append((record, kind))
             r2.upload(path, record, content_type)
-    with archive_lock(), transaction.atomic():
+    with archive_lock(exclusive=True), transaction.atomic():
         lease.check(locked=True)
+        # Pending upload objects are already counted in used(); add no bytes twice.
+        quota.ensure_publish(video, 0)
         current = Video.objects.select_for_update().get(
             pk=video.pk, job_token=lease.token, status="downloading"
         )
@@ -113,16 +118,16 @@ def process_one(lease):
     work = settings.DATA_DIR / "work"
     work.mkdir(parents=True, exist_ok=True)
     try:
+        max_bytes = quota.budget(video)
         ensure_capacity()
         with tempfile.TemporaryDirectory(prefix=f"job-{lease.token}-", dir=work) as directory:
             folder = Path(directory)
             source, info = run_child(video, folder)
             lease.check()
-            file, thumbnail, duration = transcode(source, folder)
-            audio = extract_audio(file, folder)
+            file, thumbnail, duration = transcode(source, folder, max_bytes)
+            audio = extract_audio(file, folder, max_bytes - file.stat().st_size - thumbnail.stat().st_size)
             lease.check()
             ensure_capacity(sum(p.stat().st_size for p in [file, thumbnail, audio] if p))
-            quota.ensure_publish(video, sum(p.stat().st_size for p in [file, thumbnail, audio] if p))
             publish(
                 video,
                 [

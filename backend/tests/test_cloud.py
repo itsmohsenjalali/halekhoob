@@ -189,8 +189,9 @@ def test_delete_failure_retries_and_ready_objects_are_never_removed(store, video
 
 @pytest.mark.django_db
 def test_cloud_quota_includes_retained_objects(store, video, settings):
-    CloudObject.objects.create(key="archive/old", size_bytes=100, sha256="abc", state="deleting")
-    settings.ARCHIVE_MAX_BYTES = 100
+    CloudObject.objects.create(owner=video.owner, key="archive/old", size_bytes=100, sha256="abc", state="deleting")
+    video.owner.archive_account.storage_limit = 100
+    video.owner.archive_account.save()
     with Lease() as lease, patch.object(worker, "run_child") as run:
         cloud_worker.process_one(lease)
         run.assert_not_called()
@@ -224,15 +225,20 @@ def test_portable_local_to_r2_and_cloud_backup_restore(store, source, video, set
     video.status, video.file_name = "ready", "original.mp4"
     video.size_bytes = source.stat().st_size
     video.save()
+    from library.models import QuotaChange
+
+    QuotaChange.objects.create(actor=video.owner, user=video.owner, old_limit=1000, new_limit=2000)
     original = settings.MEDIA_ROOT / "original.mp4"
     shutil.copyfile(source, original)
     output = tmp_path / "migration.tar"
     call_command("export_portable", str(output), stdout=io.StringIO())
     assert verify(output) == 2
     video.delete()
+    QuotaChange.objects.all().delete()
     get_user_model().objects.all().delete()
     settings.MEDIA_BACKEND = "r2"
     call_command("import_portable", str(output), stdout=io.StringIO())
+    assert QuotaChange.objects.get().new_limit == 2000
     restored = Video.objects.get()
     assert restored.storage_backend == "r2" and restored.note == "برای شروع دوباره"
     assert restored.moods.get().name == "امید"
@@ -247,11 +253,13 @@ def test_portable_local_to_r2_and_cloud_backup_restore(store, source, video, set
     assert verify(backup) == 2
     assert verify(meta) == 1
     Video.objects.all().delete()
+    QuotaChange.objects.all().delete()
     get_user_model().objects.all().delete()
     CloudObject.objects.all().delete()
     call_command("import_portable", str(meta), stdout=io.StringIO())
     assert Video.objects.get().file_name == restored.file_name
     Video.objects.all().delete()
+    QuotaChange.objects.all().delete()
     get_user_model().objects.all().delete()
     CloudObject.objects.all().delete()
     call_command("import_portable", str(backup), stdout=io.StringIO())
@@ -283,3 +291,22 @@ def test_postgres_concurrent_workers_only_one_acquires():
     with ThreadPoolExecutor(max_workers=2) as pool:
         results = list(pool.map(lambda _: claim(), range(2)))
     assert sum(result is not None for result in results) == 1
+
+
+@pytest.mark.django_db
+def test_quota_reduced_during_upload_prevents_publication(store, source, video):
+    upload = r2.upload
+
+    def reduce_after_upload(*args, **kwargs):
+        result = upload(*args, **kwargs)
+        account = video.owner.archive_account
+        account.storage_limit = 0
+        account.save()
+        return result
+
+    with Lease() as lease, patch.object(worker, "run_child", side_effect=download_fixture(source)), patch.object(r2, "upload", side_effect=reduce_after_upload):
+        cloud_worker.process_one(lease)
+    video.refresh_from_db()
+    assert video.status == "failed" and video.error_code == "quota"
+    assert video.file_name == "" and not CloudObject.objects.filter(state="live").exists()
+    assert CloudObject.objects.filter(video=video, state="deleting").count() == 3

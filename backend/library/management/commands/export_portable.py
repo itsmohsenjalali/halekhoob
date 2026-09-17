@@ -17,7 +17,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from library import r2
 from library.leases import Lease
-from library.models import Account, CloudObject, DailyUsage, Mood, Video
+from library.models import Account, CloudObject, DailyUsage, Mood, QuotaChange, Video
 from library.storage import archive_lock, private_path
 
 
@@ -96,6 +96,7 @@ class Command(BaseCommand):
                         *get_user_model().objects.all(),
                         *Account.objects.all(),
                         *DailyUsage.objects.all(),
+                        *QuotaChange.objects.all(),
                         *Mood.objects.all(),
                         *videos,
                     ]

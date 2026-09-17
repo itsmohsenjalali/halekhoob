@@ -320,6 +320,7 @@ export default function Archive() {
         <a className="brand" href="/">
           <BrandMark size={30} /> حال‌خوب
         </a>
+        {profile?.is_admin && <a href="/admin" className="admin-link">مدیریت</a>}
         <UserButton />
       </header>
       <div className="shell">
@@ -329,6 +330,7 @@ export default function Archive() {
             <span>لحظه‌های خوبت را نگه دار.</span>
           </a>
           <nav aria-label="منوی اصلی">
+            {profile?.is_admin && <a href="/admin" className="admin-link">مدیریت سیستم</a>}
             <button
               className={!mode ? "selected" : ""}
               onClick={() => chooseMode("")}
@@ -537,7 +539,7 @@ export default function Archive() {
             )}
             <small>
               دریافت امروز: {profile?.daily_used.toLocaleString("fa-IR") || "۰"}{" "}
-              از {profile?.daily_limit.toLocaleString("fa-IR") || "۵"}
+              · بدون سقف روزانه
             </small>
           </section>
           <p className="rail-foot">
@@ -829,7 +831,7 @@ function VideoForm({
             maxLength={1000}
           />
           <small>
-            لینک عمومی یوتیوب یا اینستاگرام؛ تا ۲۰ دقیقه و ۵۰۰ مگابایت
+            لینک عمومی یوتیوب یا اینستاگرام؛ بدون محدودیت مدت، تا سقف فضای حسابت
           </small>
         </label>
       )}

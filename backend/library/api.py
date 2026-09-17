@@ -164,8 +164,7 @@ def me(request):
             "storage_reserved": quota.reserved(request.user),
             "storage_limit": account.storage_limit,
             "daily_used": today.downloads if today else 0,
-            "daily_limit": account.daily_download_limit,
-            "queue_limit": account.queue_limit,
+            "is_admin": request.user.is_staff,
         }
     )
 

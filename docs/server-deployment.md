@@ -30,7 +30,7 @@ read/write for the worker. Enter them in `.env.server` along with:
 - `DJANGO_SECRET_KEY`: a long random secret.
 - `POSTGRES_ADMIN_PASSWORD` and `POSTGRES_APP_PASSWORD`: different random hex
   passwords. Hex avoids URL-encoding issues in the database connection string.
-- `ARCHIVE_MAX_BYTES`: the desired archive cap (8 GB in the example).
+- `DEFAULT_USER_STORAGE_BYTES`: storage quota for newly created accounts (1 GB by default). Existing quotas are managed in `/admin`.
 
 Generate each secret separately with `python3 -c 'import secrets; print(secrets.token_hex(48))'`
 in your own private terminal. Do not commit output or reuse credentials.
@@ -52,7 +52,7 @@ Use standard HTTPS port **443** for the public production origin. Allowlisting a
 
 Set `APP_PUBLIC_URL` to the canonical origin (for example `https://archive.example.com`). The frontend redirects alternate hosts/ports there before authentication. The backend independently checks the same exact origin; update R2 CORS when changing it.
 
-On an upgrade, set `CLERK_LEGACY_OWNER_EMAIL` to the verified Google email that owns the old `owner` archive. After its first successful sign-in, the archive remains bound to that Clerk subject. New installations leave this empty. Account quotas are configurable through `DEFAULT_USER_STORAGE_BYTES`, `DEFAULT_USER_DAILY_DOWNLOADS`, and `DEFAULT_USER_QUEUE_LIMIT` before account creation.
+On an upgrade, set `CLERK_LEGACY_OWNER_EMAIL` to the verified Google email that owns the old `owner` archive. After its first successful sign-in, the archive remains bound to that Clerk subject. New installations leave this empty. New accounts receive `DEFAULT_USER_STORAGE_BYTES`. Staff can edit each existing account’s storage quota at `/admin`. There are no duration, per-file 500 MB, daily-count or queue-count caps.
 
 ## 3. Start through an SSH tunnel
 
@@ -209,3 +209,27 @@ backups include the objects. R2 deletion is delayed seven days by default.
 
 Run the [manual acceptance checks](testing.md#manual-acceptance) on your own server
 before relying on it for an archive.
+
+### Administration and host monitoring
+
+After the intended administrator signs in through Clerk, explicitly grant access:
+
+```sh
+deploy/server.sh exec -T web python manage.py set_archive_admin owner@example.com
+```
+
+Only the selected, already-linked user receives Django `is_staff`; registration never grants it automatically. `/admin` uses the same Google sign-in as the archive. The API checks staff access on every request. User quotas are integer bytes, accept zero to stop new downloads, and never delete existing files when reduced. Changes are recorded with actor, target, previous/new value and timestamp. Retained R2 deletion objects still count until cleanup (normally seven days).
+
+Install the optional host collector before starting the new web container:
+
+```sh
+install -d -m 755 /var/lib/halekhoob-monitor
+install -m 644 deploy/halekhoob-monitor.service deploy/halekhoob-monitor.timer /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now halekhoob-monitor.timer
+systemctl start halekhoob-monitor.service
+```
+
+The collector assumes this documented `/opt/halekhoob` installation and Docker data on `/var/lib/docker`. It writes coarse host CPU/RAM/disk/uptime and status of this app’s five containers every 30 seconds. The web container mounts **only this snapshot directory, read-only**; it receives no Docker socket or host process filesystem. Missing or older-than-90-second samples are flagged in the UI. Database latency and worker lease are checked live. Monitoring is a current snapshot, not historical graphs or an alerting service.
+
+The single worker determines its byte budget from current account usage at execution time, bounds download/transcode output, and checks quota again at publication (including a quota reduction during upload). Queue admission no longer reserves a fixed 525 MB per unknown-length video. Disk reserve, finite subprocess timeouts, public-source validation and 720p conversion remain operational safeguards. `ARCHIVE_MAX_BYTES` is retained only for the disabled legacy interface; it does not cap multi-user downloads.

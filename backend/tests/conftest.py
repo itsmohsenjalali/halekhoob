@@ -18,7 +18,6 @@ def isolated_storage(settings, tmp_path):
     settings.MEDIA_ROOT.mkdir()
     (settings.DATA_DIR / "work").mkdir()
     settings.MIN_FREE_BYTES = 0
-    settings.MAX_VIDEO_BYTES = 5_000_000
     settings.SECURE_SSL_REDIRECT = False
     settings.STORAGES = {
         "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},

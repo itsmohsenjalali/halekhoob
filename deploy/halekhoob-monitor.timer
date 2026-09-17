@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh Halekhoob monitoring every 30 seconds
+
+[Timer]
+OnBootSec=15s
+OnUnitActiveSec=30s
+Unit=halekhoob-monitor.service
+
+[Install]
+WantedBy=timers.target

@@ -102,34 +102,25 @@ def test_cross_user_endpoints_and_category_injection(client, identities):
 
 
 @pytest.mark.django_db
-def test_quota_reservation_daily_limits_and_release(client, identities, settings):
-    settings.MAX_VIDEO_BYTES = 100
-    settings.MAX_VIDEO_SECONDS = 1
+def test_only_storage_limits_admission(client, identities):
     call(client, "me/")
     account = Account.objects.get()
-    account.storage_limit = 2_000_000
-    account.daily_download_limit = 1
+    account.storage_limit = 100
     account.save()
     category = account.user.moods.first().pk
-    first = call(
-        client,
-        "videos/",
-        "post",
-        {"source_url": "https://youtu.be/BaW_jenozKc", "category_ids": [category]},
-    )
-    assert first.status_code == 201
-    assert call(client, "me/").json()["storage_reserved"] > 0
-    blocked = call(
-        client,
-        "videos/",
-        "post",
-        {"source_url": "https://instagram.com/p/ABC1234/", "category_ids": [category]},
-    )
-    assert blocked.status_code == 429
-    item = Video.objects.get()
-    assert call(client, f"videos/{item.pk}/", "delete").status_code == 200
+    # More than both former five-item queue and daily limits, with <500 MB free.
+    for index in range(7):
+        assert call(client, "videos/", "post", {
+            "source_url": f"https://instagram.com/p/ABC123{index}/", "category_ids": [category],
+        }).status_code == 201
     assert call(client, "me/").json()["storage_reserved"] == 0
-    assert call(client, "me/").json()["daily_used"] == 1
+    assert call(client, "me/").json()["daily_used"] == 7
+    account.storage_limit = 0
+    account.save()
+    assert call(client, "videos/", "post", {
+        "source_url": "https://youtu.be/BaW_jenozKc", "category_ids": [category],
+    }).status_code == 429
+    assert Video.objects.count() == 7
 
 
 @pytest.mark.django_db

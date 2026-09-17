@@ -53,7 +53,8 @@ def test_recover_interrupted_queue_cleans_only_orphans(video, settings):
 
 @pytest.mark.django_db
 def test_quota_stops_before_download_and_preserves_existing(video, settings):
-    settings.ARCHIVE_MAX_BYTES = 10
+    video.owner.archive_account.storage_limit = 0
+    video.owner.archive_account.save()
     retained = settings.MEDIA_ROOT / "retained.mp4"
     retained.write_bytes(b"original")
     with patch.object(worker, "run_child") as download:
@@ -187,7 +188,7 @@ def test_transcode_portrait_and_odd_dimensions(dimensions, tmp_path):
     assert duration == 1 and thumbnail.is_file()
 
 
-def test_actual_file_duration_enforced_without_source_metadata(settings):
+def test_long_video_duration_is_allowed():
     result = subprocess.CompletedProcess(
         [],
         0,
@@ -199,6 +200,18 @@ def test_actual_file_duration_enforced_without_source_metadata(settings):
         ),
     )
     with patch.object(worker.subprocess, "run", return_value=result):
-        with pytest.raises(worker.JobError) as error:
-            worker.probe("source-with-no-metadata.mp4")
-    assert error.value.code == "duration"
+        duration, _, _ = worker.probe("source-with-no-metadata.mp4")
+    assert duration == 1202
+
+
+def test_real_long_video_and_audio_have_no_duration_cap(tmp_path):
+    from library.audio import extract_audio, inspect_audio
+
+    source = tmp_path / 'long-source.mp4'
+    subprocess.run(['ffmpeg', '-v', 'error', '-f', 'lavfi', '-i', 'color=s=16x16:r=1:d=1202',
+                    '-f', 'lavfi', '-i', 'anullsrc=r=8000:cl=mono', '-t', '1202',
+                    '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', str(source)], check=True)
+    file, _, duration = worker.transcode(source, tmp_path, 10_000_000)
+    audio = extract_audio(file, tmp_path, 10_000_000)
+    assert duration == 1202
+    assert float(inspect_audio(audio)['format']['duration']) > 1200
