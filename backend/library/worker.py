@@ -33,6 +33,16 @@ class JobError(Exception):
 
 def explain_error(raw):
     text = raw.lower()
+    # A public video can trigger a source-side verification gate for this server.
+    # Do not mislabel it as private content or retry the verification in a loop.
+    if any(marker in text for marker in ["not a bot", "confirm you’re not", "confirm you're not", "unusual traffic"]):
+        source = "یوتیوب" if "youtube" in text else "منبع ویدیو"
+        return JobError(
+            "source_verification",
+            f"{source} دریافت از این سرور را متوقف کرده و تأیید انسانی می‌خواهد. "
+            "این خطا به حجم یا مدت ویدیو مربوط نیست؛ ورود دوباره به حال‌خوب هم آن را برطرف نمی‌کند. "
+            "لینک و دسته‌ها حفظ شده‌اند؛ پس از رفع محدودیت منبع می‌توان دوباره تلاش کرد.",
+        )
     if "archive_limit_size" in text or "larger than max" in text or "max-filesize" in text:
         return JobError("size", "حجم ویدیو از فضای باقی‌ماندهٔ حسابت بیشتر است.")
     if "archive_limit_collection" in text or "archive_limit_live" in text:

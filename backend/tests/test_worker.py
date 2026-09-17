@@ -215,3 +215,33 @@ def test_real_long_video_and_audio_have_no_duration_cap(tmp_path):
     audio = extract_audio(file, tmp_path, 10_000_000)
     assert duration == 1202
     assert float(inspect_audio(audio)['format']['duration']) > 1200
+
+
+@pytest.mark.parametrize("message", [
+    "ERROR: [youtube] BaW_jenozKc: Sign in to confirm you’re not a bot. Use --cookies for authentication.",
+    "ERROR: [youtube] BaW_jenozKc: Sign in to confirm you're not a bot.",
+    "HTTP Error 429: YouTube detected unusual traffic",
+])
+def test_source_verification_is_not_private_content_or_transient_network(message):
+    error = worker.explain_error(message)
+    assert error.code == "source_verification" and not error.transient
+    assert "یوتیوب" in str(error)
+
+
+def test_private_video_still_requires_source_login():
+    error = worker.explain_error("ERROR: [youtube] private video: sign in")
+    assert error.code == "login_required" and not error.transient
+
+
+@pytest.mark.django_db
+def test_source_verification_stops_retries_and_preserves_archive_entry(video):
+    categories = list(video.moods.values_list("pk", flat=True))
+    source_url, note = video.source_url, video.note
+    error = worker.explain_error("[youtube] Sign in to confirm you’re not a bot")
+    with patch.object(worker, "run_child", side_effect=error):
+        assert worker.process_one()
+    video.refresh_from_db()
+    assert video.status == "failed" and video.error_code == "source_verification"
+    assert video.attempts == 1 and video.reserved_bytes == 0
+    assert video.source_url == source_url and video.note == note
+    assert list(video.moods.values_list("pk", flat=True)) == categories

@@ -233,3 +233,12 @@ systemctl start halekhoob-monitor.service
 The collector assumes this documented `/opt/halekhoob` installation and Docker data on `/var/lib/docker`. It writes coarse host CPU/RAM/disk/uptime and status of this app’s five containers every 30 seconds. The web container mounts **only this snapshot directory, read-only**; it receives no Docker socket or host process filesystem. Missing or older-than-90-second samples are flagged in the UI. Database latency and worker lease are checked live. Monitoring is a current snapshot, not historical graphs or an alerting service.
 
 The single worker determines its byte budget from current account usage at execution time, bounds download/transcode output, and checks quota again at publication (including a quota reduction during upload). Queue admission no longer reserves a fixed 525 MB per unknown-length video. Disk reserve, finite subprocess timeouts, public-source validation and 720p conversion remain operational safeguards. `ARCHIVE_MAX_BYTES` is retained only for the disabled legacy interface; it does not cap multi-user downloads.
+
+
+### YouTube requests human verification
+
+A public video may fail from the server with `Sign in to confirm you’re not a bot`. The worker reports `source_verification`, preserves the link/categories/note, and does not automatically repeat this challenge. Signing into Halekhoob through Google does not authenticate the separate YouTube downloader.
+
+Check the worker's installed yt-dlp version and its Node/EJS dependencies first. If a direct, cookie-free extraction inside the worker returns this verification response as well, the source is refusing the server request before media download; changing quotas, duration limits or R2 will not fix it. Do not silently copy user browser cookies or send their links through unconfigured third-party download services. A source-authorized download route must be configured and tested separately; successful playback in a user's browser does not prove that server downloads are available.
+
+References: [yt-dlp YouTube notes](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#youtube), [JavaScript runtime requirements](https://github.com/yt-dlp/yt-dlp/wiki/EJS).
