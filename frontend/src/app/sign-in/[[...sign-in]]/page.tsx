@@ -1,8 +1,10 @@
 import { SignIn } from "@clerk/nextjs";
+import BrandMark from "@/components/brand-mark";
 export default function Page() {
   return (
     <main className="auth-page">
       <a className="brand" href="/">
+        <BrandMark size={76} />
         حال‌خوب<span>جایی برای دوباره حال خوب داشتن</span>
       </a>
       <h1>لحظه‌های خوبت، همیشه نزدیک.</h1>

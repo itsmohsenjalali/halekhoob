@@ -129,6 +129,10 @@ small,
   color: #989a86;
   margin-top: -7px;
 }
+.brand-mark {
+  display: block;
+  flex: none;
+}
 .sidebar nav {
   display: flex;
   flex-direction: column;
@@ -817,6 +821,8 @@ progress::-moz-progress-bar {
 .auth-page .brand {
   margin-bottom: 25px;
   justify-content: center;
+  flex-direction: column;
+  gap: 14px;
 }
 .auth-page h1 {
   font-size: 27px;

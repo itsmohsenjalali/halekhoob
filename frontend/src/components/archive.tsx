@@ -21,6 +21,7 @@ import type { Api, Category, Profile, Video } from "@/lib/types";
 import { bytes } from "@/lib/types";
 import VideoCard from "./video-card";
 import AudioPlayer from "./audio-player";
+import BrandMark from "./brand-mark";
 
 type DialogState = "add" | "categories" | Video | null;
 function Modal({
@@ -299,14 +300,14 @@ export default function Archive() {
     <div className={tracks.length ? "app has-audio" : "app"}>
       <header className="mobile-header">
         <a className="brand" href="/">
-          حال‌خوب <Leaf size={23} />
+          <BrandMark size={30} /> حال‌خوب
         </a>
         <UserButton />
       </header>
       <div className="shell">
         <aside className="sidebar">
           <a className="brand" href="/">
-            حال‌خوب <Leaf size={29} />
+            <BrandMark /> حال‌خوب
             <span>لحظه‌های خوبت را نگه دار.</span>
           </a>
           <nav aria-label="منوی اصلی">
