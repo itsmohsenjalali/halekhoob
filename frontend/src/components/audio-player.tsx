@@ -135,7 +135,7 @@ export default function AudioPlayer({
     }
   }
   return (
-    <section className="audio-dock" aria-label="پخش صوتی پیوسته">
+    <section className="audio-dock" aria-label={tracks.length === 1 ? "پخش صوتی ویدیو" : "پخش صوتی پیوسته"}>
       <audio
         ref={audio}
         muted={muted}
@@ -154,20 +154,19 @@ export default function AudioPlayer({
       />
       <div className="audio-title">
         <span className="eyebrow">
-          در حال شنیدن · {(index + 1).toLocaleString("fa-IR")} از{" "}
-          {tracks.length.toLocaleString("fa-IR")}
+          {tracks.length === 1 ? "فقط صدای این ویدیو" : `پخش پیوسته · ${(index + 1).toLocaleString("fa-IR")} از ${tracks.length.toLocaleString("fa-IR")}`}
         </span>
         <strong>{track?.title}</strong>
         {error && <small role="status">{error}</small>}
       </div>
       <div className="audio-controls" dir="ltr">
-        <button
+        {tracks.length > 1 && <button
           aria-label="صدای قبلی"
           disabled={index === 0}
           onClick={() => setIndex(index - 1)}
         >
           <SkipBack size={18} />
-        </button>
+        </button>}
         <button
           className="round-play"
           aria-label={playing ? "توقف صدا" : "پخش صدا"}
@@ -184,13 +183,13 @@ export default function AudioPlayer({
         >
           {playing ? <Pause size={20} /> : <Play size={20} />}
         </button>
-        <button
+        {tracks.length > 1 && <button
           aria-label="صدای بعدی"
           disabled={index === tracks.length - 1}
           onClick={() => setIndex(index + 1)}
         >
           <SkipForward size={18} />
-        </button>
+        </button>}
       </div>
       <div className="audio-seek" dir="ltr">
         <small>{duration(position)}</small>

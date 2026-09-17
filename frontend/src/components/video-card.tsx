@@ -8,6 +8,7 @@ import {
   Volume2,
   VolumeX,
   RefreshCw,
+  Headphones,
 } from "lucide-react";
 import type { Api, Video } from "@/lib/types";
 import { duration } from "@/lib/types";
@@ -20,6 +21,9 @@ export default function VideoCard({
   download,
   retry,
   observe,
+  playAudio,
+  audioSelected,
+  resumeVideo,
 }: {
   video: Video;
   active: boolean;
@@ -29,6 +33,9 @@ export default function VideoCard({
   download: (v: Video, kind?: string) => void;
   retry: (v: Video) => void;
   observe: (id: number, el: HTMLElement | null) => void;
+  playAudio: (v: Video) => void;
+  audioSelected: boolean;
+  resumeVideo: (id: number) => void;
 }) {
   const media = useRef<HTMLVideoElement>(null);
   const renewed = useRef(false);
@@ -100,6 +107,11 @@ export default function VideoCard({
             className="video-touch"
             aria-label={paused || playFailed ? "پخش ویدیو" : "توقف ویدیو"}
             onClick={() => {
+              if (!active) {
+                resumeVideo(video.id);
+                setPaused(false);
+                return;
+              }
               if (playFailed) {
                 media.current
                   ?.play()
@@ -185,6 +197,17 @@ export default function VideoCard({
         >
           <Download size={22} />
         </button>
+        {video.status === "ready" && video.audio_url && (
+          <button
+            className="post-audio"
+            aria-label={audioSelected ? "بستن صدای این ویدیو" : "پخش صوتی این ویدیو"}
+            aria-pressed={audioSelected}
+            onClick={() => playAudio(video)}
+          >
+            <Headphones size={19} />
+            <span>{audioSelected ? "در پخش‌کننده" : "فقط صدا"}</span>
+          </button>
+        )}
         <div className="post-tags">
           {video.categories.map((c) => (
             <span key={c.id}>

@@ -74,6 +74,8 @@ export default function Archive() {
     [tracks, setTracks] = useState<Video[]>([]),
     [active, setActive] = useState<number | null>(null),
     [hidden, setHidden] = useState(false);
+  const [audioSession, setAudioSession] = useState(0);
+  const audioRequest = useRef(0);
   const nodes = useRef(new Map<number, HTMLElement>()),
     ratios = useRef(new Map<number, number>()),
     observer = useRef<IntersectionObserver | null>(null),
@@ -268,16 +270,32 @@ export default function Archive() {
     }
   }
   async function launchAudio() {
+    const request = ++audioRequest.current;
     try {
       const data = await api<{ tracks: Video[] }>(`playlist/?${filters}`);
+      if (request !== audioRequest.current || currentFilters.current !== filters) return;
       if (!data.tracks.length) {
         setNotice("در این انتخاب، ویدیوی آمادهٔ دارای صدا نیست.");
         return;
       }
       setTracks(data.tracks);
+      setAudioSession((session) => session + 1);
     } catch (e) {
       setNotice((e as Error).message);
     }
+  }
+  function closeAudio() {
+    audioRequest.current++;
+    setTracks([]);
+  }
+  function playVideoAudio(video: Video) {
+    audioRequest.current++;
+    if (tracks.length === 1 && tracks[0].id === video.id) {
+      setTracks([]);
+      return;
+    }
+    setTracks([video]);
+    setAudioSession((session) => session + 1);
   }
   const selected = categories.find((c) => c.id === category);
   if (!isLoaded)
@@ -378,9 +396,10 @@ export default function Archive() {
             </button>
           </header>
           <div className="filter-panel">
-            <div className="mood-strip" aria-label="فیلتر دسته">
+            <div className="mood-strip" role="group" aria-label="فیلتر دسته">
               <button
                 className={!category ? "active" : ""}
+                aria-pressed={!category}
                 onClick={() => setCategory(null)}
               >
                 همهٔ حس‌ها
@@ -389,6 +408,7 @@ export default function Archive() {
                 <button
                   key={c.id}
                   className={category === c.id ? "active" : ""}
+                  aria-pressed={category === c.id}
                   onClick={() => setCategory(c.id)}
                 >
                   <span>{c.symbol}</span>
@@ -411,7 +431,7 @@ export default function Archive() {
                 onClick={() => void launchAudio()}
               >
                 <Headphones size={18} />
-                <span>پخش صوتی</span>
+                <span>پخش صوتی همه</span>
               </button>
             </div>
           </div>
@@ -444,6 +464,12 @@ export default function Archive() {
                 download={download}
                 retry={retry}
                 observe={observe}
+                playAudio={playVideoAudio}
+                audioSelected={tracks.length === 1 && tracks[0].id === v.id}
+                resumeVideo={(id) => {
+                  closeAudio();
+                  setActive(id);
+                }}
               />
             ))
           ) : (
@@ -563,7 +589,7 @@ export default function Archive() {
         </div>
       )}
       {tracks.length > 0 && (
-        <AudioPlayer tracks={tracks} api={api} onClose={() => setTracks([])} />
+        <AudioPlayer key={audioSession} tracks={tracks} api={api} onClose={closeAudio} />
       )}
       {modal === "categories" && (
         <Modal title="دسته‌های من" onClose={() => setModal(null)}>
