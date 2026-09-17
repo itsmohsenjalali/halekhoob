@@ -48,7 +48,9 @@ Configure a Clerk application for your domain. Enable Google and disable email, 
 
 Set `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, private `CLERK_SECRET_KEY` and `CLERK_ISSUER` in `.env.server`. `APP_PUBLIC_URL` must exactly match the origin including its port; Compose uses it as the backend authorized party. The public key is embedded when building Next.js, so rebuild the frontend after changing it. The secret is runtime-only and must never have a `NEXT_PUBLIC_` prefix.
 
-For a nonstandard HTTPS port such as 8443, add the exact application origin to the Clerk instance's `allowedOrigins` using the Backend SDK `clerkClient.instance.update({allowedOrigins: [...]})`; preserve existing allowed origins. Without this explicit origin configuration, Clerk rejects the browser request. Test a complete Google sign-in and sign-out flow after configuration. The backend independently checks the same exact origin.
+Use standard HTTPS port **443** for the public production origin. Allowlisting a nonstandard port can make existing-user sign-in work while new-user CAPTCHA validation still fails. Clerk's Account Portal can also discard redirect destinations with a nonstandard port. Test a genuinely new Google account as well as an existing account before releasing. See [Clerk's production origin requirements](https://clerk.com/docs/guides/development/troubleshooting/using-production-keys-in-development#run-your-server-with-https-on-port-443).
+
+Set `APP_PUBLIC_URL` to the canonical origin (for example `https://archive.example.com`). The frontend redirects alternate hosts/ports there before authentication. The backend independently checks the same exact origin; update R2 CORS when changing it.
 
 On an upgrade, set `CLERK_LEGACY_OWNER_EMAIL` to the verified Google email that owns the old `owner` archive. After its first successful sign-in, the archive remains bound to that Clerk subject. New installations leave this empty. Account quotas are configurable through `DEFAULT_USER_STORAGE_BYTES`, `DEFAULT_USER_DAILY_DOWNLOADS`, and `DEFAULT_USER_QUEUE_LIMIT` before account creation.
 
@@ -76,10 +78,30 @@ ssh -N -L 8088:127.0.0.1:8088 USER@YOUR_SERVER
 Then open `http://127.0.0.1:8088` with Clerk development keys, or use the configured HTTPS origin with production keys. Google sign-in provisions each account.
 Do not publish loopback HTTP to the internet. Public origins require HTTPS.
 
-## 4. Optional independent HTTPS listener
+## 4. HTTPS behind an existing site's ingress
 
-The supplied TLS overlay listens on port 8443, so an existing website can continue
-using ports 80 and 443. To use the provided Let's Encrypt webroot flow:
+Keep the application gateway on 8443 and add a separate domain vhost to the
+existing ingress on 443. `deploy/nginx/shared-ingress.conf.example` shows the
+routing, including TLS verification of the upstream gateway. Substitute the
+domain and the host gateway address reachable from the ingress container.
+Do not replace the existing site's server blocks. Preserve the original ingress
+configuration, run `nginx -t`, then reload it without restarting its containers.
+Persist the new vhost in the ingress's mounted configuration so recreation keeps it.
+
+The optional `deploy/sync-ingress-tls.sh` copies **only Halekhoob's certificate**
+into `/etc/letsencrypt/halekhoob/DOMAIN` in the ingress container, validates Nginx,
+and reloads it. The ingress must persist that directory. Configure
+`INGRESS_CONTAINER` and `INGRESS_TLS_DOMAIN` in a systemd override for
+`halekhoob-tls-renew.service`; the renewal script invokes this helper after
+renewing the application's own certificate. For initial setup, sync the
+certificate before enabling the new vhost. Never mount the other site's
+certificate volume into Halekhoob or alter its certificates.
+
+### Independent gateway TLS setup
+
+The supplied TLS overlay listens on port 8443, so the existing ingress continues
+using ports 80 and 443. This listener is an upstream for production authentication,
+not the canonical user-facing address. To use the Let's Encrypt webroot flow:
 
 1. Point your domain's DNS to this server and allow inbound TCP 8443.
 2. Arrange for your existing HTTP server on port 80 to serve
@@ -87,7 +109,7 @@ using ports 80 and 443. To use the provided Let's Encrypt webroot flow:
    work before requesting a certificate. The overlay does not configure the
    existing site's Nginx for you.
 3. In `.env.server`, set `ENABLE_TLS=1`, `TLS_DOMAIN=archive.example.com`,
-   `TLS_PORT=8443`, `TLS_BIND_HOST=0.0.0.0`, `APP_PUBLIC_URL=https://archive.example.com:8443`,
+   `TLS_PORT=8443`, `TLS_BIND_HOST=0.0.0.0`, `APP_PUBLIC_URL=https://archive.example.com`,
    `PROXY_SCHEME=https`, and add the domain to `DJANGO_ALLOWED_HOSTS`.
    Set `ACME_WEBROOT_VOLUME` to that existing webroot volume's exact name.
 4. Obtain a certificate before recreating the gateway:
@@ -102,10 +124,10 @@ deploy/server.sh run --rm --no-deps certbot renew --dry-run --no-random-sleep-on
 ```
 
 The certificate is held in the application's own `halekhoob_tls-data` volume.
-Only the ACME webroot is shared; never share another site's certificate volume.
-The renewal script reloads only this application's gateway. An existing reverse
-proxy can also terminate TLS, but its trusted headers and routing must be
-configured for your infrastructure rather than using the independent overlay.
+Only the ACME webroot is shared with the application containers. The renewal
+script reloads this application's gateway and, when configured, syncs its
+certificate to the shared ingress. Verify both the public origin and the
+existing site's HTTPS response after configuring ingress and renewal.
 
 ## 5. Day-to-day commands
 
