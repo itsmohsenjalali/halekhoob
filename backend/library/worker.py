@@ -33,6 +33,10 @@ class JobError(Exception):
 
 def explain_error(raw):
     text = raw.lower()
+    if "archive_youtube_session_invalid" in text:
+        return JobError("source_session", "نشست دانلود یوتیوب نیاز به بررسی مدیر دارد؛ لینک و دسته‌ها حفظ شده‌اند.")
+    if "archive_limit_authenticated_content" in text:
+        return JobError("login_required", "فقط ویدیوهای عمومی بدون محدودیت ورود، سن یا اشتراک قابل دریافت هستند.")
     # A public video can trigger a source-side verification gate for this server.
     # Do not mislabel it as private content or retry the verification in a loop.
     if any(marker in text for marker in ["not a bot", "confirm you’re not", "confirm you're not", "unusual traffic"]):
@@ -130,7 +134,10 @@ def run_child(video, folder):
         "--max-bytes",
         str(max_bytes),
     ]
-    # Do not inherit app credentials, proxies, browser cookies or arbitrary Python config.
+    if video.platform == "youtube" and settings.YOUTUBE_COOKIES_FILE:
+        command.extend(["--youtube-cookies", settings.YOUTUBE_COOKIES_FILE])
+    # Only the explicitly configured YouTube session is allowed; never inherit
+    # app credentials, proxies, browser profiles or arbitrary Python config.
     env = {key: os.environ[key] for key in ("PATH", "LANG", "SSL_CERT_FILE") if key in os.environ}
     env["PYTHONUNBUFFERED"] = "1"
     started = time.monotonic()

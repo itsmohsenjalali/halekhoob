@@ -175,6 +175,7 @@ X_FRAME_OPTIONS = "DENY"
 ARCHIVE_MAX_BYTES = int(os.environ.get("ARCHIVE_MAX_BYTES", 100_000_000_000))
 MIN_FREE_BYTES = int(os.environ.get("MIN_FREE_BYTES", 2_000_000_000))
 DOWNLOAD_TIMEOUT = int(os.environ.get("DOWNLOAD_TIMEOUT", 1800))
+YOUTUBE_COOKIES_FILE = os.environ.get("YOUTUBE_COOKIES_FILE", "")
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,

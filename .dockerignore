@@ -13,6 +13,8 @@ staticfiles
 *.sql
 *.bak
 passwords.txt
+**/cookies.txt
+**/*.cookies.txt
 .hallmark
 docs/private
 backups

@@ -242,3 +242,41 @@ A public video may fail from the server with `Sign in to confirm you’re not a 
 Check the worker's installed yt-dlp version and its Node/EJS dependencies first. If a direct, cookie-free extraction inside the worker returns this verification response as well, the source is refusing the server request before media download; changing quotas, duration limits or R2 will not fix it. Do not silently copy user browser cookies or send their links through unconfigured third-party download services. A source-authorized download route must be configured and tested separately; successful playback in a user's browser does not prove that server downloads are available.
 
 References: [yt-dlp YouTube notes](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#youtube), [JavaScript runtime requirements](https://github.com/yt-dlp/yt-dlp/wiki/EJS).
+
+## Optional YouTube account session
+
+Some server IPs receive YouTube's bot-verification response even for public videos.
+A dedicated account session can help, but is not a guaranteed or permanent fix.
+Follow the [yt-dlp cookie export instructions](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies).
+Use a separate account: the session is shared by all YouTube download jobs and
+YouTube may restrict that account. Google sign-in to Halekhoob is unrelated.
+
+This integration is **disabled by default**. Export only `youtube.com` cookies
+in Netscape format; never commit the file, put it in a Docker image, or store it
+in archive backups. Place it outside the checkout, for example
+`/etc/halekhoob/youtube.cookies.txt`, with mode `600`, owned by UID/GID `10001`.
+Set these values in the private `.env.server`:
+
+```dotenv
+ENABLE_YOUTUBE_COOKIES=1
+YOUTUBE_COOKIES_HOST_FILE=/etc/halekhoob/youtube.cookies.txt
+```
+
+Rebuild the worker after installing this change, then recreate only that service:
+
+```sh
+deploy/server.sh build worker
+deploy/server.sh up -d --no-deps --force-recreate worker
+```
+
+The overlay mounts the session read-only only in the worker. Each YouTube job
+uses a private temporary copy filtered to YouTube domains, removed afterward;
+Instagram jobs do not load it. Private, paid, age-restricted and unknown-access
+videos are rejected before media download. Downloads remain sequential, with
+request delays. The session file is never added to PostgreSQL, R2 or archive
+exports. Do not share signed-in account cookies with archive users.
+
+Cookies can expire or be rotated by YouTube. Replace the file using the export
+procedure and recreate the worker (important when replacing a bind-mounted file
+atomically). To disable, set `ENABLE_YOUTUBE_COOKIES=0`, recreate the worker and
+remove the host session file. Invalidate the dedicated account session if needed.

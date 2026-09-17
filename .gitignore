@@ -18,6 +18,8 @@ artifacts/
 *.bak
 *.dump
 passwords.txt
+cookies.txt
+*.cookies.txt
 .hallmark/
 docs/private/
 backups/

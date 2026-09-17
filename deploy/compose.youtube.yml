@@ -1,0 +1,12 @@
+# Explicit opt-in: this account session is available only to the download worker.
+services:
+  worker:
+    environment:
+      YOUTUBE_COOKIES_FILE: /run/secrets/youtube.cookies.txt
+    volumes:
+      - type: bind
+        source: ${YOUTUBE_COOKIES_HOST_FILE:?Set an absolute path to the dedicated YouTube cookie file}
+        target: /run/secrets/youtube.cookies.txt
+        read_only: true
+        bind:
+          create_host_path: false
