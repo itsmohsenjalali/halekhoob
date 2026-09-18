@@ -236,12 +236,14 @@ export default function AudioPlayer({
         <span>{repeat === "off" ? "تکرار خاموش" : repeat === "one" ? "همین کلیپ" : "کل فهرست"}</span>
       </button>
       <button
+        className="audio-mute"
         aria-label={muted ? "وصل صدا" : "قطع صدا"}
         onClick={() => setMuted(!muted)}
       >
         {muted ? <VolumeX size={19} /> : <Volume2 size={19} />}
       </button>
       <button
+        className="audio-close"
         aria-label="بستن پخش صوتی"
         onClick={() => {
           audio.current?.pause();
