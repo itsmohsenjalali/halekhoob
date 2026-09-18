@@ -155,7 +155,7 @@ function UserCard({
             onChange={(e) => setLimit(e.target.value)}
             required
           />
-          <button className="primary-button" disabled={busy}>
+          <button className="primary-button" disabled={busy} aria-busy={busy}>
             {busy && <LoaderCircle className="spin" size={18} />}{busy ? "در حال ذخیره…" : "ذخیرهٔ سهمیه"}
           </button>
         </div>
@@ -484,19 +484,21 @@ export default function AdminPanel() {
                   aria-label="صفحه‌بندی کاربران"
                 >
                   <button
-                    disabled={page <= 1}
+                    disabled={usersLoading || page <= 1}
+                    aria-busy={usersLoading && page < users.page}
                     onClick={() => setPage((p) => p - 1)}
                   >
-                    قبلی
+                    {usersLoading && page < users.page && <LoaderCircle className="spin" size={16} />} قبلی
                   </button>
                   <span>
                     {number(users.page)} از {number(users.pages)}
                   </span>
                   <button
-                    disabled={page >= users.pages}
+                    disabled={usersLoading || page >= users.pages}
+                    aria-busy={usersLoading && page > users.page}
                     onClick={() => setPage((p) => p + 1)}
                   >
-                    بعدی
+                    {usersLoading && page > users.page && <LoaderCircle className="spin" size={16} />} بعدی
                   </button>
                 </nav>
               </>

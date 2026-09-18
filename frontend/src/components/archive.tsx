@@ -349,23 +349,29 @@ export default function Archive() {
             {profile?.is_admin && <a href="/admin" className="admin-link">مدیریت سیستم</a>}
             <button
               className={!mode ? "selected" : ""}
+              disabled={loading && (!mode)}
+              aria-busy={loading && (!mode)}
               onClick={() => chooseMode("")}
             >
-              <Home />
+              {loading && (!mode) ? <LoaderCircle className="spin" size={22} /> : <Home />}
               خانه
             </button>
             <button
               className={mode === "favorites" ? "selected" : ""}
+              disabled={loading && (mode === "favorites")}
+              aria-busy={loading && (mode === "favorites")}
               onClick={() => chooseMode("favorites")}
             >
-              <Heart />
+              {loading && (mode === "favorites") ? <LoaderCircle className="spin" size={22} /> : <Heart />}
               دوست‌داشتنی‌ها
             </button>
             <button
               className={mode === "pending" ? "selected" : ""}
+              disabled={loading && (mode === "pending")}
+              aria-busy={loading && (mode === "pending")}
               onClick={() => chooseMode("pending")}
             >
-              <Clock />
+              {loading && (mode === "pending") ? <LoaderCircle className="spin" size={22} /> : <Clock />}
               صف دریافت
             </button>
             <button onClick={() => setModal("categories")}>
@@ -441,7 +447,7 @@ export default function Archive() {
             </div>
             <div className="feed-tools">
               <label className="search">
-                <Search size={18} />
+                {loading && query ? <LoaderCircle className="spin" size={18} /> : <Search size={18} />}
                 <input
                   aria-label="جست‌وجوی آرشیو"
                   placeholder="بین لحظه‌های خوبت بگرد…"
@@ -574,16 +580,20 @@ export default function Archive() {
         <button
           aria-label="خانه"
           className={!mode ? "selected" : ""}
-          onClick={() => chooseMode("")}
+          disabled={loading && (!mode)}
+              aria-busy={loading && (!mode)}
+              onClick={() => chooseMode("")}
         >
-          <Home size={22} />
+          {loading && (!mode) ? <LoaderCircle className="spin" size={22} /> : <Home size={22} />}
         </button>
         <button
           aria-label="علاقه‌مندی‌ها"
           className={mode === "favorites" ? "selected" : ""}
-          onClick={() => chooseMode("favorites")}
+          disabled={loading && (mode === "favorites")}
+              aria-busy={loading && (mode === "favorites")}
+              onClick={() => chooseMode("favorites")}
         >
-          <Heart size={22} />
+          {loading && (mode === "favorites") ? <LoaderCircle className="spin" size={22} /> : <Heart size={22} />}
         </button>
         <button
           className="nav-add"
@@ -595,9 +605,11 @@ export default function Archive() {
         <button
           aria-label="صف دریافت"
           className={mode === "pending" ? "selected" : ""}
-          onClick={() => chooseMode("pending")}
+          disabled={loading && (mode === "pending")}
+              aria-busy={loading && (mode === "pending")}
+              onClick={() => chooseMode("pending")}
         >
-          <Clock size={22} />
+          {loading && (mode === "pending") ? <LoaderCircle className="spin" size={22} /> : <Clock size={22} />}
         </button>
         <button aria-label="دسته‌های من" onClick={() => setModal("categories")}>
           <Folder size={22} />
