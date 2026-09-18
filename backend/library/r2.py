@@ -106,7 +106,7 @@ def stored_bytes():
 def defer_delete(objects):
     objects.update(
         state="deleting",
-        delete_after=timezone.now() + timedelta(days=settings.R2_DELETE_DELAY_DAYS),
+        delete_after=timezone.now(),
     )
 
 

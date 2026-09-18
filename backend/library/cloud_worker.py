@@ -4,8 +4,10 @@ import logging
 import shutil
 import signal
 import tempfile
+import threading
 import time
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
 
 from django.conf import settings
@@ -18,6 +20,38 @@ from .models import Account, CloudObject, Video
 from .storage import archive_lock
 
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def deletion_runner(lease):
+    """Clean the durable deletion queue independently of long media downloads."""
+    stopped = threading.Event()
+
+    def run():
+        try:
+            while not stopped.is_set():
+                close_old_connections()
+                try:
+                    lease.check()
+                    r2.cleanup(lease.check)
+                except LeaseLost:
+                    return
+                except Exception:
+                    logger.warning("R2 cleanup unavailable; retrying the durable queue")
+                finally:
+                    close_old_connections()
+                stopped.wait(2)
+        finally:
+            close_old_connections()
+
+    thread = threading.Thread(target=run, name="r2-deletions", daemon=True)
+    thread.start()
+    try:
+        yield
+    finally:
+        stopped.set()
+        # Stop before releasing the lease or starting archive maintenance.
+        thread.join()
 
 
 def recover(lease):
@@ -175,18 +209,15 @@ def work(once=False):
         try:
             with Lease() as lease:
                 recover(lease)
-                last_cleanup = 0
-                while True:
-                    close_old_connections()
-                    lease.check()
-                    if time.monotonic() - last_cleanup > 60:
-                        r2.cleanup(lease.check)
-                        last_cleanup = time.monotonic()
-                    processed = process_one(lease)
-                    if once:
-                        return processed
-                    if not processed:
-                        time.sleep(5)
+                with deletion_runner(lease):
+                    while True:
+                        close_old_connections()
+                        lease.check()
+                        processed = process_one(lease)
+                        if once:
+                            return processed
+                        if not processed:
+                            time.sleep(5)
         except LeaseBusy:
             if once:
                 return False

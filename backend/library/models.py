@@ -83,7 +83,7 @@ class WorkerLease(models.Model):
 
 
 class CloudObject(models.Model):
-    """An upload journal and durable, delayed deletion queue. Keys are immutable."""
+    """An upload journal and durable deletion retry queue. Keys are immutable."""
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="cloud_objects")
     key = models.CharField(max_length=250, unique=True)

@@ -130,7 +130,6 @@ if MEDIA_BACKEND == "r2":
     if not DEBUG and not os.environ.get("DATABASE_URL"):
         raise ImproperlyConfigured("Production R2 requires PostgreSQL.")
 WORKER_LEASE_SECONDS = 120
-R2_DELETE_DELAY_DAYS = max(1, int(os.environ.get("R2_DELETE_DELAY_DAYS", "7")))
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {

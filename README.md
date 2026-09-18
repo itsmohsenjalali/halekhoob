@@ -72,7 +72,7 @@ For an existing installation, take a full backup before migration. Set `CLERK_LE
 
 - Public individual YouTube/Instagram videos only: up to 720p, bounded by each user’s remaining storage quota, with no duration, daily-count or queue-count cap. No source-account cookies, private content, livestreams or playlists.
 - Defaults: 1 GB per new user, five source download attempts per UTC day and five queued jobs. Reservations include conversion headroom; existing migrated users retain an 8 GB limit. Configure defaults before signup; existing account limits are stored in the database.
-- Global archive cap also applies. Deleted R2 objects count against storage until delayed deletion completes.
+- Global archive cap also applies. Deleted R2 objects count against storage until deletion completes (normally within seconds; failures are retried).
 - Platform availability varies by source, server IP and extractor support. Download only media you are entitled to save.
 - Self-hosting and third-party providers have their own costs and quotas; this repository does not guarantee free hosting.
 

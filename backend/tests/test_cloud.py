@@ -109,12 +109,11 @@ def test_cloud_pipeline_private_redirect_and_durable_delete(
     assert client_logged.post(f"/videos/{video.pk}/delete/").status_code == 302
     assert not Video.objects.filter(pk=video.pk).exists()
     assert CloudObject.objects.filter(state="deleting").count() == 3
-    size = r2.stored_bytes()
-    r2.cleanup()
-    assert r2.stored_bytes() == size  # retention still consumes quota
-    CloudObject.objects.update(delete_after=timezone.now() - timedelta(seconds=1))
+    assert all(obj.delete_after <= timezone.now() for obj in CloudObject.objects.all())
     r2.cleanup()
     assert not CloudObject.objects.exists()
+    assert r2.stored_bytes() == 0
+    assert store.list_objects_v2(Bucket=settings.R2_BUCKET_NAME).get("KeyCount", 0) == 0
 
 
 @pytest.mark.django_db
@@ -310,3 +309,30 @@ def test_quota_reduced_during_upload_prevents_publication(store, source, video):
     assert video.status == "failed" and video.error_code == "quota"
     assert video.file_name == "" and not CloudObject.objects.filter(state="live").exists()
     assert CloudObject.objects.filter(video=video, state="deleting").count() == 3
+
+
+def test_deletion_runner_cleans_while_download_thread_is_busy():
+    import threading
+    from types import SimpleNamespace
+
+    cleaned = threading.Event()
+    lease = SimpleNamespace(check=lambda: None)
+    with patch.object(cloud_worker, "close_old_connections"), patch.object(
+        r2, "cleanup", side_effect=lambda check: (check(), cleaned.set())
+    ):
+        with cloud_worker.deletion_runner(lease):
+            # Main worker may be blocked waiting for a video; deletion runs anyway.
+            assert cleaned.wait(3)
+    assert not any(t.name == "r2-deletions" for t in threading.enumerate())
+
+
+def test_deletion_runner_stops_when_worker_loses_lease():
+    from types import SimpleNamespace
+
+    def lost():
+        raise LeaseLost("test")
+
+    with patch.object(cloud_worker, "close_old_connections"), patch.object(r2, "cleanup") as cleanup:
+        with cloud_worker.deletion_runner(SimpleNamespace(check=lost)):
+            pass
+        cleanup.assert_not_called()

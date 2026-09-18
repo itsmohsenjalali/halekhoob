@@ -205,7 +205,7 @@ preferably with a fresh bucket prefix, after `migrate` and before creating an
 owner. Use `import_portable` with write-capable R2 credentials; inspect its `--help`
 for arguments. Stop the worker and make the input readable by container UID 10001.
 Metadata-only restore requires the original objects to remain available; full
-backups include the objects. R2 deletion is delayed seven days by default.
+backups include the objects. R2 deletion has no retention delay. A background task in the worker checks the durable deletion queue every two seconds, including during long downloads. Failed R2 requests are retried with backoff; quota is released after deletion succeeds. Metadata-only backups cannot restore deleted media; a full backup is needed.
 
 Run the [manual acceptance checks](testing.md#manual-acceptance) on your own server
 before relying on it for an archive.
@@ -218,7 +218,7 @@ After the intended administrator signs in through Clerk, explicitly grant access
 deploy/server.sh exec -T web python manage.py set_archive_admin owner@example.com
 ```
 
-Only the selected, already-linked user receives Django `is_staff`; registration never grants it automatically. `/admin` uses the same Google sign-in as the archive. The API checks staff access on every request. User quotas are integer bytes, accept zero to stop new downloads, and never delete existing files when reduced. Changes are recorded with actor, target, previous/new value and timestamp. Retained R2 deletion objects still count until cleanup (normally seven days).
+Only the selected, already-linked user receives Django `is_staff`; registration never grants it automatically. `/admin` uses the same Google sign-in as the archive. The API checks staff access on every request. User quotas are integer bytes, accept zero to stop new downloads, and never delete existing files when reduced. Changes are recorded with actor, target, previous/new value and timestamp. R2 objects awaiting deletion retries still count until physical deletion succeeds.
 
 Install the optional host collector before starting the new web container:
 
