@@ -1169,6 +1169,7 @@ button[aria-busy="true"] { cursor: wait; }
 .mobile-flow > header { position: sticky; top: 0; z-index: 5; background: #fffef9; border-bottom: 1px solid #e2e6d8; display: flex; align-items: center; justify-content: space-between; padding: max(12px, env(safe-area-inset-top)) 16px 12px; }
 .mobile-flow h2 { font-size: 18px; margin: 0; }
 .mobile-flow > header button { width: 44px; height: 44px; }
+.flow-content .category-list { max-height: none; overflow: visible; }
 .flow-content { padding: 24px 18px max(32px, env(safe-area-inset-bottom)); max-width: 560px; margin: auto; }
 .mobile-flow-open .shell, .mobile-flow-open .mobile-header, .mobile-flow-open .mobile-nav, .mobile-flow-open .audio-dock { display: none; }
 .mobile-flow-open .app { padding: 0; }
