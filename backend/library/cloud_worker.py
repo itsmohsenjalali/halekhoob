@@ -158,10 +158,14 @@ def process_one(lease):
             folder = Path(directory)
             source, info = run_child(video, folder)
             lease.check()
+            Video.objects.filter(pk=video.pk, job_token=lease.token).update(progress=90)
             file, thumbnail, duration = transcode(source, folder, max_bytes)
+            lease.check()
+            Video.objects.filter(pk=video.pk, job_token=lease.token).update(progress=94)
             audio = extract_audio(file, folder, max_bytes - file.stat().st_size - thumbnail.stat().st_size)
             lease.check()
             ensure_capacity(sum(p.stat().st_size for p in [file, thumbnail, audio] if p))
+            Video.objects.filter(pk=video.pk, job_token=lease.token).update(progress=96)
             publish(
                 video,
                 [

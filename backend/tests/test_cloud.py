@@ -83,8 +83,25 @@ def download_fixture(source):
 def test_cloud_pipeline_private_redirect_and_durable_delete(
     store, source, video, client_logged, settings
 ):
-    with Lease() as lease, patch.object(worker, "run_child", side_effect=download_fixture(source)):
+    stages = []
+
+    def observe(fn, expected):
+        def wrapped(*args, **kwargs):
+            video.refresh_from_db()
+            assert video.status == "downloading" and video.progress == expected
+            stages.append(expected)
+            return fn(*args, **kwargs)
+        return wrapped
+
+    from library import audio
+
+    with Lease() as lease, patch.object(worker, "run_child", side_effect=download_fixture(source)), patch.object(
+        worker, "transcode", side_effect=observe(worker.transcode, 90)
+    ), patch.object(audio, "extract_audio", side_effect=observe(audio.extract_audio, 94)), patch.object(
+        r2, "upload", side_effect=observe(r2.upload, 96)
+    ):
         assert cloud_worker.process_one(lease)
+    assert stages == [90, 94, 96, 96, 96]
     video.refresh_from_db()
     assert video.status == "ready" and video.storage_backend == "r2" and video.audio_name
     assert CloudObject.objects.filter(video=video, state="live").count() == 3

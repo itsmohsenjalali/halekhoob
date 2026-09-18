@@ -13,6 +13,7 @@ import {
   Download,
   X,
   ArrowDown,
+  ArrowRight,
   Trash2,
   Check,
   LoaderCircle,
@@ -22,6 +23,7 @@ import { bytes } from "@/lib/types";
 import VideoCard from "./video-card";
 import AudioPlayer from "./audio-player";
 import BrandMark from "./brand-mark";
+import ActionButton from "./action-button";
 
 type DialogState = "add" | "categories" | Video | null;
 function Modal({
@@ -34,28 +36,35 @@ function Modal({
   children: React.ReactNode;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const [mobile] = useState(() => window.matchMedia("(max-width: 720px)").matches);
+  const flowMarker = useRef<string | null>(null);
+  const savedScroll = useRef(0);
+  const close = useRef(onClose);
+  close.current = onClose;
   useEffect(() => {
-    dialog.current?.showModal();
-    return () => dialog.current?.close();
-  }, []);
-  return (
-    <dialog
-      ref={dialog}
-      className="modal"
-      onClose={onClose}
-      onClick={(e) => {
-        if (e.target === dialog.current) onClose();
-      }}
-    >
-      <header>
-        <h2>{title}</h2>
-        <button aria-label="بستن" onClick={onClose}>
-          <X size={21} />
-        </button>
-      </header>
-      {children}
-    </dialog>
-  );
+    if (!mobile) {
+      const el = dialog.current;
+      el?.showModal();
+      return () => el?.close();
+    }
+    if (!flowMarker.current) {
+      flowMarker.current = crypto.randomUUID();
+      savedScroll.current = window.scrollY;
+      history.pushState({ ...history.state, archiveFlow: flowMarker.current }, "", "#flow");
+    }
+    const back = () => close.current();
+    window.addEventListener("popstate", back);
+    document.body.classList.add("mobile-flow-open");
+    window.scrollTo(0, 0);
+    return () => {
+      window.removeEventListener("popstate", back);
+      document.body.classList.remove("mobile-flow-open");
+      requestAnimationFrame(() => window.scrollTo(0, savedScroll.current));
+    };
+  }, [mobile]);
+  const header = <header><h2 id="flow-title">{title}</h2><button type="button" aria-label={mobile ? "بازگشت به آرشیو" : "بستن"} onClick={onClose}>{mobile ? <ArrowRight size={22} /> : <X size={21} />}</button></header>;
+  if (mobile) return <section className="mobile-flow" aria-labelledby="flow-title">{header}<div className="flow-content">{children}</div></section>;
+  return <dialog ref={dialog} className="modal" aria-labelledby="flow-title" onClose={onClose} onClick={(e) => { if (e.target === dialog.current) onClose(); }}>{header}{children}</dialog>;
 }
 export default function Archive() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
@@ -154,20 +163,23 @@ export default function Archive() {
       });
     return () => controller.abort();
   }, [api, filters, isLoaded, isSignedIn]);
+  const pendingIds = items.filter(v => ["queued", "downloading"].includes(v.status)).map(v => v.id).join(",");
   useEffect(() => {
-    if (mode !== "pending" || !isSignedIn) return;
-    const id = setInterval(() => {
-      if (document.hidden) return;
-      api<{ items: Video[]; next_page: number | null }>(`videos/?${filters}`)
-        .then((data) => {
-          setItems(data.items);
-          setNext(data.next_page);
-          void refreshProfile();
-        })
-        .catch(() => {});
-    }, 5000);
-    return () => clearInterval(id);
-  }, [mode, isSignedIn, api, filters, refreshProfile]);
+    if (!pendingIds || !isSignedIn) return;
+    let cancelled = false, running = false;
+    const poll = async () => {
+      if (document.hidden || running) return;
+      running = true;
+      try {
+        const updated = await Promise.all(pendingIds.split(",").map(id => api<Video>(`videos/${id}/`)));
+        if (cancelled) return;
+        setItems(old => old.map(v => updated.find(item => item.id === v.id) || v));
+        if (updated.some(v => v.status === "ready" || v.status === "failed")) void refreshProfile().catch(() => {});
+      } catch {} finally { running = false; }
+    };
+    const id = setInterval(() => void poll(), 2000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [pendingIds, isSignedIn, api, refreshProfile]);
   useEffect(() => {
     const changed = () => setHidden(document.hidden);
     document.addEventListener("visibilitychange", changed);
@@ -238,6 +250,10 @@ export default function Archive() {
   }, [next, loadMore]);
   function update(video: Video) {
     setItems((old) => old.map((v) => (v.id === video.id ? video : v)));
+  }
+  function closeFlow() {
+    if (history.state?.archiveFlow) history.back();
+    setModal(null);
   }
   function chooseMode(value: string) {
     setMode(value);
@@ -402,8 +418,11 @@ export default function Archive() {
               <button
                 className={!category ? "active" : ""}
                 aria-pressed={!category}
+                aria-busy={loading && !category}
+                disabled={loading && !category}
                 onClick={() => setCategory(null)}
               >
+                {loading && !category && <LoaderCircle className="spin" size={14} />}
                 همهٔ حس‌ها
               </button>
               {categories.map((c) => (
@@ -411,9 +430,11 @@ export default function Archive() {
                   key={c.id}
                   className={category === c.id ? "active" : ""}
                   aria-pressed={category === c.id}
+                  aria-busy={loading && category === c.id}
+                  disabled={loading && category === c.id}
                   onClick={() => setCategory(c.id)}
                 >
-                  <span>{c.symbol}</span>
+                  {loading && category === c.id ? <LoaderCircle className="spin" size={14} /> : <span>{c.symbol}</span>}
                   {c.name}
                 </button>
               ))}
@@ -428,13 +449,13 @@ export default function Archive() {
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </label>
-              <button
+              <ActionButton
                 className="listen-button"
-                onClick={() => void launchAudio()}
+                onAction={launchAudio}
               >
                 <Headphones size={18} />
                 <span>پخش صوتی همه</span>
-              </button>
+              </ActionButton>
             </div>
           </div>
           <div className="feed-label">
@@ -459,7 +480,7 @@ export default function Archive() {
               <VideoCard
                 key={v.id}
                 video={v}
-                active={active === v.id && !hidden && !tracks.length}
+                active={active === v.id && !hidden && !tracks.length && !modal}
                 api={api}
                 update={update}
                 edit={setModal}
@@ -500,7 +521,7 @@ export default function Archive() {
             {next && (
               <button disabled={loadingMore} onClick={() => void loadMore()}>
                 {loadingMore ? "در حال دریافت…" : "ویدیوهای بیشتر"}
-                <ArrowDown size={15} />
+                {loadingMore ? <LoaderCircle className="spin" size={15} /> : <ArrowDown size={15} />}
               </button>
             )}
           </div>
@@ -594,7 +615,7 @@ export default function Archive() {
         <AudioPlayer key={audioSession} tracks={tracks} api={api} onClose={closeAudio} />
       )}
       {modal === "categories" && (
-        <Modal title="دسته‌های من" onClose={() => setModal(null)}>
+        <Modal title="دسته‌های من" onClose={() => closeFlow()}>
           <CategoryManager
             categories={categories}
             api={api}
@@ -614,7 +635,7 @@ export default function Archive() {
       {modal && modal !== "categories" && (
         <Modal
           title={modal === "add" ? "یک لحظهٔ خوب ذخیره کن" : "ویرایش ویدیو"}
-          onClose={() => setModal(null)}
+          onClose={() => closeFlow()}
         >
           <VideoForm
             video={modal === "add" ? undefined : modal}
@@ -637,13 +658,13 @@ export default function Archive() {
                     : "ویدیو ثبت شد؛ دریافت در پس‌زمینه ادامه پیدا می‌کند.",
                 );
               } else update(video);
-              setModal(null);
+              closeFlow();
               void refreshProfile();
             }}
             onDelete={(video) => {
               setItems((old) => old.filter((v) => v.id !== video.id));
               setTracks((old) => old.filter((v) => v.id !== video.id));
-              setModal(null);
+              closeFlow();
               void refreshProfile();
             }}
             onDownload={download}
@@ -666,9 +687,11 @@ function CategoryManager({
 }) {
   const [name, setName] = useState(""),
     [message, setMessage] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(""),
+    [deleteId, setDeleteId] = useState<number | null>(null);
   async function action(path: string, method: string, data?: object) {
-    setBusy(true);
+    if (busy) return false;
+    setBusy(method + path);
     setMessage("");
     try {
       await api(path, {
@@ -681,7 +704,7 @@ function CategoryManager({
       setMessage((e as Error).message);
       return false;
     } finally {
-      setBusy(false);
+      setBusy("");
     }
   }
   return (
@@ -702,8 +725,8 @@ function CategoryManager({
           required
           onChange={(e) => setName(e.target.value)}
         />
-        <button className="primary-button" disabled={busy}>
-          <Plus size={18} />
+        <button className="primary-button" disabled={!!busy}>
+          {busy === "POSTcategories/" ? <LoaderCircle className="spin" size={18} /> : <Plus size={18} />}
           ساخت دسته
         </button>
       </form>
@@ -727,28 +750,25 @@ function CategoryManager({
               maxLength={40}
               required
             />
-            <button disabled={busy} aria-label={`ذخیرهٔ دسته ${c.name}`}>
-              <Check size={18} />
+            <button disabled={!!busy} aria-label={`ذخیرهٔ دسته ${c.name}`}>
+              {busy === `PATCHcategories/${c.id}/` ? <LoaderCircle className="spin" size={18} /> : <Check size={18} />}
             </button>
             <button
-              disabled={busy}
+              disabled={!!busy}
               type="button"
               aria-label={`حذف دسته ${c.name}`}
-              onClick={async () => {
-                if (
-                  confirm(
-                    "دسته حذف شود؟ ویدیوهای آن در آرشیو باقی می‌مانند.",
-                  ) &&
-                  (await action(`categories/${c.id}/`, "DELETE"))
-                )
-                  onDeleted(c.id);
-              }}
+              onClick={() => setDeleteId(c.id)}
             >
-              <Trash2 size={18} />
+              {busy === `DELETEcategories/${c.id}/` ? <LoaderCircle className="spin" size={18} /> : <Trash2 size={18} />}
             </button>
           </form>
         ))}
       </div>
+      {deleteId !== null && <div className="inline-confirm" role="group" aria-label="تأیید حذف دسته">
+        <p>دسته حذف شود؟ ویدیوهای آن در آرشیو می‌مانند.</p>
+        <ActionButton className="danger" disabled={!!busy} onAction={async () => { if (await action(`categories/${deleteId}/`, "DELETE")) { onDeleted(deleteId); setDeleteId(null); } }}>حذف دسته</ActionButton>
+        <button type="button" disabled={!!busy} onClick={() => setDeleteId(null)}>انصراف</button>
+      </div>}
       {message && (
         <p className="inline-error" role="alert">
           {message}
@@ -772,7 +792,7 @@ function VideoForm({
   initialCategory: number | null;
   onSaved: (v: Video) => void;
   onDelete: (v: Video) => void;
-  onDownload: (v: Video, kind?: string) => void;
+  onDownload: (v: Video, kind?: string) => Promise<void>;
 }) {
   const [ids, setIds] = useState<number[]>(
       video
@@ -783,11 +803,13 @@ function VideoForm({
             ? [categories[0].id]
             : [],
     ),
-    [busy, setBusy] = useState(false),
+    [busy, setBusy] = useState<"" | "save" | "delete">(""),
+    [confirmDelete, setConfirmDelete] = useState(false),
     [message, setMessage] = useState("");
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setBusy(true);
+    if (busy) return;
+    setBusy("save");
     setMessage("");
     const form = new FormData(e.currentTarget);
     const data = {
@@ -814,7 +836,7 @@ function VideoForm({
     } catch (e) {
       setMessage((e as Error).message);
     } finally {
-      setBusy(false);
+      setBusy("");
     }
   }
   return (
@@ -881,8 +903,9 @@ function VideoForm({
           {message}
         </p>
       )}
-      <button className="primary-button" disabled={busy || !ids.length}>
-        {busy
+      <button className="primary-button" disabled={!!busy || !ids.length} aria-busy={busy === "save"}>
+        {busy === "save" && <LoaderCircle className="spin" size={18} />}
+        {busy === "save"
           ? "در حال ذخیره…"
           : video
             ? "ذخیرهٔ تغییرات"
@@ -890,40 +913,41 @@ function VideoForm({
       </button>
       {video && (
         <div className="edit-actions">
-          <button
-            type="button"
-            disabled={busy || video.status !== "ready"}
-            onClick={() => onDownload(video)}
+          <ActionButton
+            disabled={!!busy || video.status !== "ready"}
+            onAction={() => onDownload(video)}
           >
             <Download size={17} />
             دانلود ویدیو
-          </button>
+          </ActionButton>
           {video.audio_url && (
-            <button type="button" onClick={() => onDownload(video, "audio")}>
+            <ActionButton disabled={!!busy} onAction={() => onDownload(video, "audio")}>
               <Headphones size={17} />
               دانلود صدا
-            </button>
+            </ActionButton>
           )}
           <button
             className="danger"
             type="button"
-            disabled={busy || video.status === "downloading"}
+            disabled={!!busy || video.status === "downloading"} aria-busy={busy === "delete"}
             onClick={async () => {
-              if (!confirm("این ویدیو از آرشیوت حذف شود؟")) return;
-              setBusy(true);
+              if (busy) return;
+              if (!confirmDelete) { setConfirmDelete(true); return; }
+              setBusy("delete");
               try {
                 await api(`videos/${video.id}/`, { method: "DELETE" });
                 onDelete(video);
               } catch (e) {
                 setMessage((e as Error).message);
               } finally {
-                setBusy(false);
+                setBusy("");
               }
             }}
           >
-            <Trash2 size={17} />
-            حذف از آرشیو
+            {busy === "delete" ? <LoaderCircle className="spin" size={17} /> : <Trash2 size={17} />}
+            {confirmDelete ? "تأیید حذف ویدیو و فایل‌ها" : "حذف از آرشیو"}
           </button>
+          {confirmDelete && <button type="button" disabled={!!busy} onClick={() => setConfirmDelete(false)}>انصراف از حذف</button>}
         </div>
       )}
     </form>

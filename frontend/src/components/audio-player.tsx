@@ -8,8 +8,12 @@ import {
   X,
   Volume2,
   VolumeX,
+  Repeat,
+  Repeat1,
+  LoaderCircle,
 } from "lucide-react";
 import type { Api, Video } from "@/lib/types";
+import { nextAudioIndex, type RepeatMode } from "@/lib/audio-repeat";
 import { duration } from "@/lib/types";
 export default function AudioPlayer({
   tracks,
@@ -27,7 +31,9 @@ export default function AudioPlayer({
     [position, setPosition] = useState(0),
     [length, setLength] = useState(0),
     [muted, setMuted] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [buffering, setBuffering] = useState(true),
+    [repeat, setRepeat] = useState<RepeatMode>("off");
   const track = tracks[index];
   const current = useRef({ index, tracks });
   current.current = { index, tracks };
@@ -40,8 +46,10 @@ export default function AudioPlayer({
     renewed.current = false;
     setError("");
     setPosition(0);
+    setLength(0);
+    setBuffering(true);
     el.src = track.audio_url || "";
-    el.play().catch(() => setError("برای شروع پخش، دکمهٔ پخش را بزن."));
+    el.play().catch(() => { setBuffering(false); setError("برای شروع پخش، دکمهٔ پخش را بزن."); });
     if ("mediaSession" in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: track.title,
@@ -110,6 +118,7 @@ export default function AudioPlayer({
   }, [playing]);
   async function recover() {
     if (renewed.current) {
+      setBuffering(false);
       setError("فایل در دسترس نیست؛ دوباره تلاش کن یا به بعدی برو.");
       return;
     }
@@ -117,13 +126,17 @@ export default function AudioPlayer({
     const el = audio.current;
     if (!el || !track) return;
     const time = el.currentTime;
+    const expectedId = track.id;
+    setBuffering(true);
     try {
       const updated = await api<Video>(`videos/${track.id}/`);
+      if (current.current.tracks[current.current.index]?.id !== expectedId) return;
       if (!updated.audio_url) throw Error();
       el.src = updated.audio_url;
       el.addEventListener(
         "loadedmetadata",
         () => {
+          if (current.current.tracks[current.current.index]?.id !== expectedId) return;
           el.currentTime = time;
           el.play().catch(() => setError("برای ادامه پخش را بزن."));
         },
@@ -131,6 +144,7 @@ export default function AudioPlayer({
       );
       el.load();
     } catch {
+      setBuffering(false);
       setError("ارتباط برقرار نشد؛ دوباره تلاش کن.");
     }
   }
@@ -139,6 +153,10 @@ export default function AudioPlayer({
       <audio
         ref={audio}
         muted={muted}
+        loop={repeat === "one" || (repeat === "all" && tracks.length === 1)}
+        onWaiting={() => setBuffering(true)}
+        onPlaying={() => setBuffering(false)}
+        onCanPlay={() => setBuffering(false)}
         onPlay={() => {
           setPlaying(true);
           setError("");
@@ -147,8 +165,12 @@ export default function AudioPlayer({
         onTimeUpdate={() => setPosition(audio.current?.currentTime || 0)}
         onLoadedMetadata={() => setLength(audio.current?.duration || 0)}
         onEnded={() => {
-          if (index < tracks.length - 1) setIndex(index + 1);
-          else setPlaying(false);
+          const next = nextAudioIndex(index, tracks.length, repeat);
+          if (next === null) setPlaying(false);
+          else if (next === index && audio.current) {
+            audio.current.currentTime = 0;
+            void audio.current.play().catch(() => setError("برای ادامه پخش را بزن."));
+          } else setIndex(next);
         }}
         onError={() => void recover()}
       />
@@ -169,6 +191,8 @@ export default function AudioPlayer({
         </button>}
         <button
           className="round-play"
+          aria-busy={buffering}
+          disabled={buffering && !playing}
           aria-label={playing ? "توقف صدا" : "پخش صدا"}
           onClick={() => {
             if (error) {
@@ -181,7 +205,7 @@ export default function AudioPlayer({
             else audio.current?.pause();
           }}
         >
-          {playing ? <Pause size={20} /> : <Play size={20} />}
+          {buffering ? <LoaderCircle className="spin" size={20} /> : playing ? <Pause size={20} /> : <Play size={20} />}
         </button>
         {tracks.length > 1 && <button
           aria-label="صدای بعدی"
@@ -207,6 +231,10 @@ export default function AudioPlayer({
         />
         <small>{duration(length || 0)}</small>
       </div>
+      <button className="audio-repeat" aria-pressed={repeat !== "off"} aria-label={repeat === "off" ? "تکرار خاموش" : repeat === "one" ? "تکرار همین کلیپ" : "تکرار کل فهرست"} title="تغییر حالت تکرار" onClick={() => setRepeat(value => tracks.length === 1 ? (value === "off" ? "one" : "off") : value === "off" ? "all" : value === "all" ? "one" : "off")}>
+        {repeat === "one" ? <Repeat1 size={20} /> : <Repeat size={20} />}
+        <span>{repeat === "off" ? "تکرار خاموش" : repeat === "one" ? "همین کلیپ" : "کل فهرست"}</span>
+      </button>
       <button
         aria-label={muted ? "وصل صدا" : "قطع صدا"}
         onClick={() => setMuted(!muted)}

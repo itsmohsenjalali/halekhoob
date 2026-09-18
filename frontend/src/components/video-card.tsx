@@ -9,8 +9,10 @@ import {
   VolumeX,
   RefreshCw,
   Headphones,
+  LoaderCircle,
 } from "lucide-react";
 import type { Api, Video } from "@/lib/types";
+import ActionButton from "./action-button";
 import { duration } from "@/lib/types";
 export default function VideoCard({
   video,
@@ -30,8 +32,8 @@ export default function VideoCard({
   api: Api;
   update: (v: Video) => void;
   edit: (v: Video) => void;
-  download: (v: Video, kind?: string) => void;
-  retry: (v: Video) => void;
+  download: (v: Video, kind?: string) => Promise<void>;
+  retry: (v: Video) => Promise<void>;
   observe: (id: number, el: HTMLElement | null) => void;
   playAudio: (v: Video) => void;
   audioSelected: boolean;
@@ -42,7 +44,8 @@ export default function VideoCard({
   const [muted, setMuted] = useState(true),
     [paused, setPaused] = useState(false),
     [playFailed, setPlayFailed] = useState(false),
-    [message, setMessage] = useState("");
+    [message, setMessage] = useState(""),
+    [buffering, setBuffering] = useState(false);
   useEffect(() => {
     const el = media.current;
     if (!el) return;
@@ -102,6 +105,9 @@ export default function VideoCard({
             preload="metadata"
             onError={() => void recover()}
             onPlay={() => setPlayFailed(false)}
+            onWaiting={() => setBuffering(true)}
+            onPlaying={() => setBuffering(false)}
+            onCanPlay={() => setBuffering(false)}
           />
           <button
             className="video-touch"
@@ -120,7 +126,7 @@ export default function VideoCard({
               } else setPaused(!paused);
             }}
           >
-            {(!active || paused || playFailed) && (
+            {buffering && active && !paused ? <span className="play-overlay"><LoaderCircle className="spin" size={28} aria-label="در حال آماده‌سازی پخش" /></span> : (!active || paused || playFailed) && (
               <span className="play-overlay">
                 <Play size={32} fill="currentColor" />
               </span>
@@ -140,7 +146,7 @@ export default function VideoCard({
       ) : (
         <div className="pending-stage">
           <span className="pending-symbol">
-            {video.status === "failed" ? "↻" : "◒"}
+            {video.status === "failed" ? "↻" : <LoaderCircle className="spin" size={30} />}
           </span>
           <strong>
             {video.status === "failed"
@@ -153,25 +159,26 @@ export default function VideoCard({
             {video.error ||
               "می‌توانی این صفحه را ببندی؛ دریافت ادامه پیدا می‌کند."}
           </p>
-          {video.status === "downloading" && (
-            <progress max="100" value={video.progress} />
-          )}{" "}
+          {["queued", "downloading"].includes(video.status) && <div className="download-progress" role="status">
+            <div><span>{video.status === "queued" ? "در انتظار شروع" : video.progress >= 96 ? "ذخیره در آرشیو" : video.progress >= 90 ? "آماده‌سازی تصویر و صدا" : video.progress > 0 ? "دریافت فایل" : "در حال اتصال به منبع"}</span><span>{video.progress > 0 ? `${Math.min(100, video.progress).toLocaleString("fa-IR")}٪` : "لطفاً صبر کن"}</span></div>
+            <progress aria-label="پیشرفت دریافت ویدیو" max={100} value={video.progress > 0 ? video.progress : undefined} />
+          </div>}
           {video.status === "failed" && (
-            <button className="soft-button" onClick={() => retry(video)}>
+            <ActionButton className="soft-button" onAction={() => retry(video)}>
               <RefreshCw size={16} />
               تلاش دوباره
-            </button>
+            </ActionButton>
           )}
         </div>
       )}
       <div className="post-actions">
-        <button
+        <ActionButton
           className={video.favorite ? "favorited" : ""}
           aria-label={
             video.favorite ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها"
           }
           aria-pressed={video.favorite}
-          onClick={async () => {
+          onAction={async () => {
             try {
               const updated = await api<Video>(`videos/${video.id}/`, {
                 method: "PATCH",
@@ -189,14 +196,14 @@ export default function VideoCard({
           }}
         >
           <Heart size={23} fill={video.favorite ? "currentColor" : "none"} />
-        </button>
-        <button
+        </ActionButton>
+        <ActionButton
           aria-label="دانلود ویدیو"
           disabled={video.status !== "ready"}
-          onClick={() => download(video)}
+          onAction={() => download(video)}
         >
           <Download size={22} />
-        </button>
+        </ActionButton>
         {video.status === "ready" && video.audio_url && (
           <button
             className="post-audio"

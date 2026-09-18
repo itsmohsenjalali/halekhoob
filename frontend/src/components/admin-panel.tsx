@@ -1,8 +1,9 @@
 "use client";
 import { useAuth, UserButton } from "@clerk/nextjs";
 import { useCallback, useEffect, useState } from "react";
-import { ArrowRight, RefreshCw, Search, ShieldCheck } from "lucide-react";
+import { ArrowRight, RefreshCw, Search, ShieldCheck, LoaderCircle } from "lucide-react";
 import { bytes } from "@/lib/types";
+import ActionButton from "./action-button";
 import BrandMark from "./brand-mark";
 
 type Counts = Record<string, number>;
@@ -155,7 +156,7 @@ function UserCard({
             required
           />
           <button className="primary-button" disabled={busy}>
-            {busy ? "در حال ذخیره…" : "ذخیرهٔ سهمیه"}
+            {busy && <LoaderCircle className="spin" size={18} />}{busy ? "در حال ذخیره…" : "ذخیرهٔ سهمیه"}
           </button>
         </div>
         {limit.trim() && proposed < user.storage_used && (
@@ -269,14 +270,14 @@ export default function AdminPanel() {
           </h1>
           <p>هر کاربر، فضای خودش. بدون محدودیت مدت و تعداد دریافت ویدیو.</p>
         </div>
-        <button
+        <ActionButton
           className="admin-refresh"
-          onClick={() => void refresh()}
+          onAction={refresh}
           aria-label="به‌روزرسانی وضعیت"
         >
           <RefreshCw size={18} />
           به‌روزرسانی
-        </button>
+        </ActionButton>
       </div>
       {error && (
         <p className="admin-warning" role="alert">
@@ -439,7 +440,8 @@ export default function AdminPanel() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-              <button aria-label="جست‌وجوی کاربران">
+              <button aria-label="جست‌وجوی کاربران" disabled={usersLoading} aria-busy={usersLoading}>
+                {usersLoading && <LoaderCircle className="spin" size={18} />}
                 <Search size={20} />
               </button>
             </form>

@@ -1152,3 +1152,38 @@ progress::-moz-progress-bar {
 @media (max-width: 850px) { .admin-stats { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (max-width: 600px) { .admin-page { padding: 16px 14px 40px; } .admin-header { gap: 10px; flex-wrap: wrap; } .admin-back { font-size: 12px; } .admin-header .brand { font-size: 19px; } .admin-users { grid-template-columns: minmax(0,1fr); } .admin-stats { gap: 10px; } .admin-stats article { padding: 14px; } .admin-stats article strong { font-size: 18px; } .admin-user { padding: 16px; } .admin-quota-input { gap: 8px; } .admin-page button { padding: 8px 10px; } }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+/* Busy feedback belongs to the action that is running. */
+button[aria-busy="true"] > svg:not(.spin) { display: none; }
+button[aria-busy="true"] { cursor: wait; }
+.download-progress { width: min(100%, 340px); margin: 12px auto 0; }
+.download-progress > div { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; margin-bottom: 8px; }
+.download-progress progress { display: block; width: 100%; height: 7px; }
+.download-progress progress:indeterminate { background: linear-gradient(90deg, #e4e8db 25%, #829568 50%, #e4e8db 75%); background-size: 200% 100%; animation: progress-pulse 1.6s ease-in-out infinite; }
+@keyframes progress-pulse { to { background-position: -200% 0; } }
+.inline-confirm { padding: 12px; border: 1px solid #e4d8ce; border-radius: 12px; }
+.inline-confirm button { margin-inline-end: 12px; }
+.audio-repeat { display: flex; gap: 5px; align-items: center; white-space: nowrap; font-size: 10px; }
+.audio-repeat[aria-pressed="true"] { color: #425c2a; background: #eaf0df; border-radius: 10px; }
+.mobile-flow { min-height: 100dvh; background: #fffef9; }
+.mobile-flow > header { position: sticky; top: 0; z-index: 5; background: #fffef9; border-bottom: 1px solid #e2e6d8; display: flex; align-items: center; justify-content: space-between; padding: max(12px, env(safe-area-inset-top)) 16px 12px; }
+.mobile-flow h2 { font-size: 18px; margin: 0; }
+.mobile-flow > header button { width: 44px; height: 44px; }
+.flow-content { padding: 24px 18px max(32px, env(safe-area-inset-bottom)); max-width: 560px; margin: auto; }
+@media (max-width: 720px) {
+  .mobile-flow-open .shell, .mobile-flow-open .mobile-header, .mobile-flow-open .mobile-nav, .mobile-flow-open .audio-dock { display: none; }
+  .mobile-flow-open .app { padding: 0; }
+  .mobile-flow-open .toast { bottom: 16px; }
+  .flow-content input, .flow-content textarea { font-size: 16px; }
+  .flow-content .primary-button { min-height: 48px; }
+  .audio-dock { grid-template-columns: minmax(0, 1fr) auto 40px 40px; }
+  .audio-title { grid-column: 1 / 3; }
+  .audio-controls { grid-column: 1 / 3; grid-row: 2; justify-content: flex-start; }
+  .audio-dock > .audio-repeat { grid-column: 3 / 5; grid-row: 2; justify-content: center; }
+  .audio-seek { grid-column: 1 / -1; grid-row: 3; }
+  .has-audio .toast { bottom: 218px; }
+  .has-audio .feed { padding-bottom: 250px; }
+}
+@media (prefers-reduced-motion: reduce) { .download-progress progress:indeterminate { animation: none; } }
+
+.download-progress progress:indeterminate::-webkit-progress-bar { background: transparent; }

@@ -178,9 +178,11 @@ def run_child(video, folder):
                         except json.JSONDecodeError:
                             continue
                         if event.get("event") == "progress":
-                            Video.objects.filter(pk=video.pk, job_token=video.job_token).update(
-                                progress=max(0, min(88, int(event.get("progress", 0))))
-                            )
+                            progress = max(0, min(88, int(event.get("progress", 0))))
+                            Video.objects.filter(
+                                pk=video.pk, job_token=video.job_token,
+                                status="downloading", progress__lt=progress,
+                            ).update(progress=progress)
                         elif event.get("event") == "complete":
                             result = event
                         elif event.get("event") == "error":
