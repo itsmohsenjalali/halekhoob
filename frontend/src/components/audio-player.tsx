@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import type { Api, Video } from "@/lib/types";
 import { nextAudioIndex, type RepeatMode } from "@/lib/audio-repeat";
-import { duration } from "@/lib/types";
+import AudioSeek from "./audio-seek";
 export default function AudioPlayer({
   tracks,
   api,
@@ -33,7 +33,10 @@ export default function AudioPlayer({
     [muted, setMuted] = useState(false),
     [error, setError] = useState(""),
     [buffering, setBuffering] = useState(true),
-    [repeat, setRepeat] = useState<RepeatMode>("off");
+    [repeat, setRepeat] = useState<RepeatMode>("off"),
+    [rate, setRate] = useState(1);
+  const rateRef = useRef(rate);
+  rateRef.current = rate;
   const track = tracks[index];
   const current = useRef({ index, tracks });
   current.current = { index, tracks };
@@ -64,6 +67,13 @@ export default function AudioPlayer({
       if (nav.audioSession) nav.audioSession.type = "playback";
     } catch {}
   }, [track]);
+  useEffect(() => {
+    const el = audio.current;
+    if (!el) return;
+    el.defaultPlaybackRate = rate;
+    el.playbackRate = rate;
+    el.preservesPitch = true;
+  }, [rate, track]);
   useEffect(() => {
     if (!("mediaSession" in navigator)) return;
     const actions: Record<string, MediaSessionActionHandler> = {
@@ -137,6 +147,7 @@ export default function AudioPlayer({
         "loadedmetadata",
         () => {
           if (current.current.tracks[current.current.index]?.id !== expectedId) return;
+          el.playbackRate = rateRef.current;
           el.currentTime = time;
           el.play().catch(() => setError("برای ادامه پخش را بزن."));
         },
@@ -163,7 +174,12 @@ export default function AudioPlayer({
         }}
         onPause={() => setPlaying(false)}
         onTimeUpdate={() => setPosition(audio.current?.currentTime || 0)}
-        onLoadedMetadata={() => setLength(audio.current?.duration || 0)}
+        onLoadedMetadata={() => {
+          const el = audio.current;
+          if (!el) return;
+          setLength(Number.isFinite(el.duration) ? el.duration : 0);
+          el.playbackRate = rateRef.current;
+        }}
         onEnded={() => {
           const next = nextAudioIndex(index, tracks.length, repeat);
           if (next === null) setPlaying(false);
@@ -175,10 +191,20 @@ export default function AudioPlayer({
         onError={() => void recover()}
       />
       <div className="audio-title">
+        <div className="audio-heading"><div className="audio-track-info">
         <span className="eyebrow">
           {tracks.length === 1 ? "فقط صدای این ویدیو" : `پخش پیوسته · ${(index + 1).toLocaleString("fa-IR")} از ${tracks.length.toLocaleString("fa-IR")}`}
         </span>
         <strong>{track?.title}</strong>
+        </div><label className="audio-speed">
+          <span className="sr-only">سرعت پخش صدا</span>
+          <select aria-label="سرعت پخش صدا" dir="ltr" value={rate} onChange={e => setRate(Number(e.target.value))}>
+            <option value="1">1×</option>
+            <option value="1.5">1.5×</option>
+            <option value="2">2×</option>
+            <option value="3">3×</option>
+          </select>
+        </label></div>
         {error && <small role="status">{error}</small>}
       </div>
       <div className="audio-controls" dir="ltr">
@@ -215,22 +241,13 @@ export default function AudioPlayer({
           <SkipForward size={18} />
         </button>}
       </div>
-      <div className="audio-seek" dir="ltr">
-        <small>{duration(position)}</small>
-        <input
-          aria-label="زمان پخش صدا"
-          type="range"
-          min="0"
-          max={Number.isFinite(length) ? length : 0}
-          value={Math.min(position, length || 0)}
-          step="0.1"
-          onChange={(e) => {
-            if (audio.current)
-              audio.current.currentTime = Number(e.target.value);
-          }}
-        />
-        <small>{duration(length || 0)}</small>
-      </div>
+      <AudioSeek key={track?.id} position={position} length={length} onSeek={seconds => {
+        const el = audio.current;
+        if (!el || !Number.isFinite(el.duration)) return;
+        const target = Math.max(0, Math.min(seconds, el.duration));
+        el.currentTime = target;
+        setPosition(target);
+      }} />
       <button className="audio-repeat" aria-pressed={repeat !== "off"} aria-label={repeat === "off" ? "تکرار خاموش" : repeat === "one" ? "تکرار همین کلیپ" : "تکرار کل فهرست"} title="تغییر حالت تکرار" onClick={() => setRepeat(value => tracks.length === 1 ? (value === "off" ? "one" : "off") : value === "off" ? "all" : value === "all" ? "one" : "off")}>
         {repeat === "one" ? <Repeat1 size={20} /> : <Repeat size={20} />}
         <span>{repeat === "off" ? "تکرار خاموش" : repeat === "one" ? "همین کلیپ" : "کل فهرست"}</span>
