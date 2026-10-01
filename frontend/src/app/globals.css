@@ -750,7 +750,7 @@ progress::-moz-progress-bar {
   background: #ffffff15;
 }
 .has-audio .toast {
-  bottom: 110px;
+  bottom: 230px;
 }
 .audio-dock {
   position: fixed;
@@ -758,10 +758,16 @@ progress::-moz-progress-bar {
   left: 0;
   right: 0;
   z-index: 20;
-  display: flex;
+  display: grid;
+  direction: ltr;
   align-items: center;
-  gap: 18px;
-  padding: 16px max(24px, calc((100vw - 1140px) / 2));
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  grid-template-areas:
+    "close title title"
+    "seek seek seek"
+    "volume controls repeat";
+  gap: 8px;
+  padding: 12px max(16px, calc((100% - 640px) / 2));
   background: #fffef9f5;
   backdrop-filter: blur(20px);
   border-top: 1px solid #d9dfcc;
@@ -769,14 +775,18 @@ progress::-moz-progress-bar {
 }
 .audio-dock > audio { display: none; }
 .audio-title {
-  width: 220px;
-  min-width: 100px;
+  grid-area: title;
+  direction: rtl;
+  text-align: right;
+  width: auto;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
+.audio-title .eyebrow { font-size: 10px; }
 .audio-title strong {
-  font-size: 12px;
+  font-size: 14px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -786,10 +796,21 @@ progress::-moz-progress-bar {
   color: #aa725f;
 }
 .audio-controls {
+  grid-area: controls;
   display: flex;
-  gap: 5px;
+  justify-content: center;
+  gap: 4px;
   align-items: center;
 }
+.audio-controls button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  flex-shrink: 0;
+}
+.audio-controls .round-play { width: 48px; height: 48px; }
 .round-play {
   background: #6b7e50;
   color: white !important;
@@ -803,22 +824,37 @@ progress::-moz-progress-bar {
 .audio-heading { display: flex; align-items: center; gap: 10px; }
 .audio-track-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
 .audio-speed {
+  position: relative;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
-  color: #425c2a;
-  background: #f3f4ed;
-  border: 1px solid #d9dfcc;
-  border-radius: 10px;
-  min-height: 44px;
-  width: 64px;
+  color: #849078;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  height: 44px;
+  width: 48px;
   flex-shrink: 0;
-  padding: 0 4px;
+  padding: 0 0 6px;
   cursor: pointer;
 }
-.audio-speed[data-active="true"] { background: #6b7e50; border-color: #6b7e50; color: white; }
-.audio-speed[data-active="true"]:hover { background: #52673d; }
-.audio-seek { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 0; }
+.audio-speed:hover { background: transparent; color: #425c2a; }
+.audio-speed[data-active="true"] { color: #425c2a; font-weight: 750; }
+.audio-speed::after {
+  content: "";
+  position: absolute;
+  bottom: 5px;
+  left: calc(50% - 2px);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0;
+}
+.audio-speed[data-active="true"]::after { opacity: 1; }
+.audio-speed:focus-visible { outline: 2px solid #7d9260; outline-offset: 2px; }
+.audio-seek { grid-area: seek; min-width: 0; display: flex; flex-direction: column; gap: 0; }
 .audio-timeline {
   display: block;
   width: 100%;
@@ -837,11 +873,19 @@ progress::-moz-progress-bar {
 .audio-times small { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .audio-times small { font-size: 10px; flex-shrink: 0; }
 .audio-dock > button {
-  padding: 7px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
   color: #84936f;
 }
+.audio-close { grid-area: close; }
+.audio-mute { grid-area: volume; }
+.audio-dock > .audio-repeat { grid-area: repeat; }
+.audio-repeat > span { display: none; }
 .has-audio .feed {
-  padding-bottom: 140px;
+  padding-bottom: 260px;
 }
 .auth-page {
   min-height: 100dvh;
@@ -897,12 +941,6 @@ progress::-moz-progress-bar {
   }
   .right-rail {
     display: none;
-  }
-  .audio-title {
-    width: 180px;
-  }
-  .audio-dock {
-    padding: 14px 20px;
   }
 }
 @media (max-width: 720px) {
@@ -1059,54 +1097,7 @@ progress::-moz-progress-bar {
     padding: 11px 12px;
     width: calc(100% - 28px);
   }
-  .audio-dock {
-    bottom: 66px;
-    display: grid;
-    direction: ltr;
-    grid-template-columns: 44px minmax(0, 1fr) 44px;
-    grid-template-areas:
-      "close title title"
-      "seek seek seek"
-      "volume controls repeat";
-    padding: 12px 16px;
-    gap: 8px;
-  }
-  .audio-title {
-    grid-area: title;
-    direction: rtl;
-    text-align: right;
-    min-width: 0;
-    width: auto;
-  }
-  .audio-title .eyebrow { font-size: 10px; }
-  .audio-title strong { font-size: 14px; }
-  .audio-controls {
-    grid-area: controls;
-    justify-content: center;
-    gap: 4px;
-  }
-  .audio-controls button {
-    display: grid;
-    place-items: center;
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    flex-shrink: 0;
-  }
-  .audio-controls .round-play { width: 48px; height: 48px; }
-  .audio-dock > button {
-    display: grid;
-    place-items: center;
-    width: 44px;
-    height: 44px;
-    min-height: 44px;
-    padding: 0;
-  }
-  .audio-close { grid-area: close; }
-  .audio-mute { grid-area: volume; }
-  .audio-dock > .audio-repeat { grid-area: repeat; }
-  .audio-repeat > span { display: none; }
-  .audio-seek { grid-area: seek; min-width: 0; }
+  .audio-dock { bottom: 66px; }
   .has-audio .toast { bottom: 286px; }
   .has-audio .feed { padding-bottom: 320px; }
   .modal {
