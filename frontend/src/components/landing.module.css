@@ -69,8 +69,6 @@
 .demoCaption { border-top: 1px solid var(--landing-rule); padding-top: 20px; margin-top: 16px; min-height: 144px; }
 .demoCaption h2 { font-size: 17px; font-weight: 700; }
 .demoCaption p { color: var(--landing-muted); font-size: 13px; margin-top: 8px; }
-.demoBottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; margin-top: 8px; color: var(--landing-muted); font-size: 10px; }
-.demoBottom button { min-width: 44px; min-height: 44px; flex: none; }
 .demo[data-running="false"] :is(.downloadTrack span, .wave i) { animation-play-state: paused; }
 .features { display: grid; gap: 28px; padding-block: 56px; border-top: 1px solid var(--landing-rule); scroll-margin-top: 24px; }
 .featureIntro h2, .closing h2 { font-size: clamp(25px, 3vw, 36px); line-height: 1.7; font-weight: 750; }

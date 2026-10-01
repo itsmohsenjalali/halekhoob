@@ -13,15 +13,13 @@ const steps = [
 
 function Demo() {
   const [step, setStep] = useState(0);
-  const [autoplay, setAutoplay] = useState(true);
+  const [interaction, setInteraction] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(true);
   const [visible, setVisible] = useState(false);
   const [inView, setInView] = useState(false);
-  const [hovered, setHovered] = useState(false);
-  const [focused, setFocused] = useState(false);
   const [category, setCategory] = useState("آرامش");
   const demo = useRef<HTMLDivElement>(null);
-  const running = autoplay && !reducedMotion && visible && inView && !hovered && !focused;
+  const running = !reducedMotion && visible && inView;
 
   useEffect(() => {
     const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -44,20 +42,15 @@ function Demo() {
     if (!running) return;
     const timer = window.setTimeout(() => setStep((value) => (value + 1) % steps.length), 8000);
     return () => window.clearTimeout(timer);
-  }, [running, step]);
+  }, [running, step, interaction]);
 
   function selectStep(index: number) {
     setStep(index);
-    setAutoplay(false);
+    setInteraction((value) => value + 1);
   }
 
   return (
-    <div ref={demo} className={styles.demo} data-running={running}
-      onPointerEnter={(event) => { if (event.pointerType === "mouse") setHovered(true); }}
-      onPointerLeave={() => setHovered(false)}
-      onFocusCapture={() => setFocused(true)}
-      onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}
-    >
+    <div ref={demo} className={styles.demo} data-running={running}>
       <div className={styles.demoTop}>
         <span>یک نگاه به حال‌خوب</span>
         <span className={styles.exampleLabel}>نمایش نمونه</span>
@@ -70,7 +63,7 @@ function Demo() {
         ))}
       </div>
       <div id="landing-demo-panel" className={styles.demoPanel}>
-        <div key={step} className={styles.scene}>
+        <div key={`${step}-${interaction}`} className={styles.scene}>
           {step === 0 && (
             <div className={styles.linkScene}>
               <div className={styles.sourceNames}><span>YouTube</span><span>Instagram</span></div>
@@ -87,7 +80,7 @@ function Demo() {
           {step === 1 && (
             <div className={styles.archiveScene}>
               <div className={styles.categoryList} aria-label="دسته‌های نمونه">
-                {["آرامش", "یادگیری", "انگیزه"].map((name) => <button key={name} type="button" aria-pressed={category === name} onClick={() => { setCategory(name); setAutoplay(false); }}>{name}</button>)}
+                {["آرامش", "یادگیری", "انگیزه"].map((name) => <button key={name} type="button" aria-pressed={category === name} onClick={() => { setCategory(name); setInteraction((value) => value + 1); }}>{name}</button>)}
               </div>
               <div className={styles.archiveItem}><div className={styles.miniArt} aria-hidden="true"><Play size={22} /></div><div><strong>{category === "آرامش" ? "چند دقیقه برای خودت" : category === "یادگیری" ? "یک چیز تازه یاد بگیر" : "از همین امروز شروع کن"}</strong><span>{category} · آرشیو شخصی</span></div><Heart size={20} fill="currentColor" /></div>
               <div className={styles.archiveItem}><div className={styles.miniArt} aria-hidden="true"><Play size={22} /></div><div><strong>{category === "آرامش" ? "صدای یک صبح آرام" : category === "یادگیری" ? "ایده‌ای برای امتحان کردن" : "یک قدم کوچک دیگر"}</strong><span>{category} · آمادهٔ پخش</span></div><Check size={20} /></div>
@@ -104,14 +97,11 @@ function Demo() {
           )}
         </div>
       </div>
-      <div className={styles.demoCaption} aria-live={autoplay ? "off" : "polite"}>
+      <div className={styles.demoCaption} aria-live={reducedMotion ? "polite" : "off"}>
         <h2>{steps[step].title}</h2>
         <p>{steps[step].text}</p>
       </div>
-      <div className={styles.demoBottom}>
-        <span>نمونهٔ آموزشی؛ دانلود یا پخش واقعی انجام نمی‌شود.</span>
-        {!reducedMotion && <button type="button" onClick={() => setAutoplay((value) => !value)} aria-label={autoplay ? "توقف نمایش خودکار" : "شروع نمایش خودکار"}>{autoplay ? <Pause size={16} /> : <Play size={16} />}</button>}
-      </div>
+
     </div>
   );
 }
