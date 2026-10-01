@@ -15,6 +15,8 @@ import {
 import type { Api, Video } from "@/lib/types";
 import { nextAudioIndex, type RepeatMode } from "@/lib/audio-repeat";
 import AudioSeek from "./audio-seek";
+const PLAYBACK_RATES = [1, 1.5, 2, 3];
+
 export default function AudioPlayer({
   tracks,
   api,
@@ -196,15 +198,17 @@ export default function AudioPlayer({
           {tracks.length === 1 ? "فقط صدای این ویدیو" : `پخش پیوسته · ${(index + 1).toLocaleString("fa-IR")} از ${tracks.length.toLocaleString("fa-IR")}`}
         </span>
         <strong>{track?.title}</strong>
-        </div><label className="audio-speed">
-          <span className="sr-only">سرعت پخش صدا</span>
-          <select aria-label="سرعت پخش صدا" dir="ltr" value={rate} onChange={e => setRate(Number(e.target.value))}>
-            <option value="1">1×</option>
-            <option value="1.5">1.5×</option>
-            <option value="2">2×</option>
-            <option value="3">3×</option>
-          </select>
-        </label></div>
+        </div><button
+          type="button"
+          className="audio-speed"
+          dir="ltr"
+          data-active={rate !== 1}
+          aria-label={`سرعت پخش: ${rate}×`}
+          title="برای تغییر سرعت بزن"
+          onClick={() => setRate(value => PLAYBACK_RATES[(PLAYBACK_RATES.indexOf(value) + 1) % PLAYBACK_RATES.length])}
+        >
+          {rate}×
+        </button></div>
         {error && <small role="status">{error}</small>}
       </div>
       <div className="audio-controls" dir="ltr">
