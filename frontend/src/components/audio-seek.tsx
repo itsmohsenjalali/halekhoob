@@ -15,7 +15,7 @@ export default function AudioSeek({ position, length, onSeek }: {
   const [time, setTime] = useState("");
   const [error, setError] = useState("");
   const maximum = Number.isFinite(length) && length > 0 ? length : 0;
-  const shown = Math.max(0, Math.min(draft ?? position, maximum));
+  const shown = Math.max(0, Math.min(Math.floor(draft ?? position), maximum));
   function cancelDrag() {
     dragging.current = false;
     setDraft(null);
