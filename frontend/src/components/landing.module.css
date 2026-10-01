@@ -1,0 +1,100 @@
+/* Hallmark · macrostructure: Workbench · tone: calm · anchor hue: olive
+ * Existing Garden brand preserved at user request. N9 navigation / Ft1 footer.
+ * Audience: personal video collectors. Use: understand, then create an archive.
+ * Motion: scene fade, download progress, audio waveform. No external animation assets.
+ */
+@import "../../tokens.css";
+
+:global(html):has(.landing), :global(body):has(.landing) { overflow-x: clip; }
+.landing { color: var(--landing-ink); background: var(--landing-paper); font-family: var(--landing-font); font-size: 16px; line-height: 1.9; padding-inline: clamp(20px, 5vw, 80px); }
+.landing :is(button, a, summary):focus-visible { outline: 2px solid var(--landing-accent-dark); outline-offset: 5px; }
+.landing :is(a, button) { -webkit-tap-highlight-color: transparent; }
+.landing :is(h1, h2, h3) { text-wrap: balance; }
+.header, .hero, .features, .questions, .closing, .footer { max-width: 1160px; margin-inline: auto; }
+.header { display: flex; align-items: center; justify-content: space-between; padding-block: 28px; }
+.brand { display: inline-flex; align-items: center; gap: 10px; font-size: 23px; font-weight: 750; color: var(--landing-accent-dark); white-space: nowrap; }
+.login { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; font-size: 14px; font-weight: 600; }
+.skip { position: absolute; inset-inline-start: 20px; top: -100px; z-index: 10; padding: 12px; background: var(--landing-surface); }
+.skip:focus { top: 8px; }
+.hero { display: grid; gap: 40px; align-items: center; padding-block: 36px 64px; }
+.intro { min-width: 0; }
+.lead { color: var(--landing-muted); font-size: 14px; margin-bottom: 20px; }
+.intro h1 { font-weight: 800; font-size: clamp(30px, 4vw, 52px); line-height: 1.55; }
+.intro h1 span { color: var(--landing-accent); }
+.description { color: var(--landing-muted); max-width: 43ch; margin-block: 24px 28px; }
+.primary { display: inline-flex; justify-content: center; align-items: center; gap: 20px; min-height: 52px; padding: 12px 24px; border-radius: 12px; color: var(--landing-surface); background: var(--landing-accent); font-size: 15px; font-weight: 600; white-space: nowrap; }
+.primary:hover { background: var(--landing-accent-dark); }
+.primary:active { transform: translateY(1px); }
+.reassurance { font-size: 12px; color: var(--landing-muted); margin-top: 12px; }
+.more { display: inline-flex; gap: 16px; align-items: center; min-height: 44px; margin-top: 20px; font-size: 13px; color: var(--landing-accent-dark); }
+.demo { min-width: 0; background: var(--landing-surface); border: 1px solid var(--landing-rule); border-radius: 24px; padding: 20px; }
+.demoTop { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 650; font-size: 14px; }
+.exampleLabel { font-size: 11px; color: var(--landing-muted); font-weight: 400; }
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding-block: 20px; }
+.steps button { min-height: 44px; padding: 8px 4px; font-size: 12px; white-space: nowrap; color: var(--landing-muted); gap: 6px; }
+.steps button span { font-size: 11px; }
+.steps button[aria-pressed="true"] { background: var(--landing-soft); color: var(--landing-accent-dark); font-weight: 700; }
+.demoPanel { display: grid; min-height: 268px; }
+.scene { min-width: 0; animation: scene-in 420ms var(--landing-ease-out); }
+.linkScene, .archiveScene { padding-block: 16px 8px; }
+.sourceNames { display: flex; gap: 20px; direction: ltr; font-size: 13px; font-weight: 600; color: var(--landing-muted); margin-bottom: 24px; }
+.linkField { border: 1px solid var(--landing-rule); border-radius: 10px; display: flex; gap: 12px; align-items: center; padding: 14px 12px; font-size: 13px; color: var(--landing-muted); }
+.linkField span { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: left; }
+.linkField svg { flex: none; color: var(--landing-accent); }
+.demoDownload, .archiveItem { display: flex; align-items: center; gap: 12px; margin-top: 24px; font-size: 13px; }
+.demoDownload > div:nth-child(2), .archiveItem > div:nth-child(2) { flex: 1; min-width: 0; }
+.demoDownload strong, .archiveItem strong { display: block; font-weight: 650; }
+.demoDownload span, .archiveItem span { display: block; font-size: 11px; color: var(--landing-muted); margin-top: 3px; }
+.demoDownload > svg, .archiveItem > svg { color: var(--landing-accent); flex: none; }
+.miniArt { width: 48px; height: 58px; flex: none; display: grid; place-items: center; border-radius: 9px; background: var(--landing-soft); color: var(--landing-accent); }
+.downloadTrack { height: 4px; background: var(--landing-soft); border-radius: 4px; margin-top: 16px; overflow: clip; }
+.downloadTrack span { display: block; height: 100%; background: var(--landing-accent); transform-origin: right; animation: download-progress 8s var(--landing-ease-in-out) infinite; }
+.downloadNote { font-size: 11px; color: var(--landing-muted); margin-top: 14px; }
+.categoryList { display: flex; gap: 8px; }
+.categoryList button { border: 1px solid var(--landing-rule); border-radius: 24px; font-size: 12px; min-height: 44px; padding-inline: 16px; }
+.categoryList button[aria-pressed="true"] { background: var(--landing-accent); color: var(--landing-surface); border-color: var(--landing-accent); }
+.archiveItem { margin-top: 16px; }
+.archiveItem + .archiveItem { border-top: 1px solid var(--landing-rule); padding-top: 12px; }
+.landscape { height: 128px; position: relative; overflow: clip; border-radius: 12px; background: var(--landing-sky); }
+.sun { position: absolute; width: 42px; height: 42px; border-radius: 50%; background: var(--landing-sun); top: 16px; left: 22%; }
+.hillBack { position: absolute; width: 90%; height: 140px; border-radius: 50% 50% 0 0; background: var(--landing-hill-back); left: -18%; top: 70px; transform: rotate(14deg); }
+.hillFront { position: absolute; width: 90%; height: 120px; border-radius: 50% 50% 0 0; background: var(--landing-hill-front); right: -22%; top: 80px; transform: rotate(-18deg); }
+.artCaption { position: absolute; top: 24px; right: 24px; color: var(--landing-accent-dark); font-weight: 600; }
+.samplePlayer { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 12px; }
+.samplePlayer > span { margin-inline-start: auto; color: var(--landing-accent); font-weight: 700; }
+.wave { height: 42px; display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: 8px; overflow: clip; }
+.wave i { width: 4px; flex: none; border-radius: 4px; background: var(--landing-accent); animation: waveform 900ms var(--landing-ease-in-out) infinite alternate; }
+.sampleControls { display: flex; justify-content: center; align-items: center; gap: 44px; color: var(--landing-accent); }
+.sampleControls > span { background: var(--landing-accent); color: var(--landing-surface); display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; }
+.demoCaption { border-top: 1px solid var(--landing-rule); padding-top: 20px; margin-top: 16px; min-height: 144px; }
+.demoCaption h2 { font-size: 17px; font-weight: 700; }
+.demoCaption p { color: var(--landing-muted); font-size: 13px; margin-top: 8px; }
+.demoBottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; margin-top: 8px; color: var(--landing-muted); font-size: 10px; }
+.demoBottom button { min-width: 44px; min-height: 44px; flex: none; }
+.demo[data-running="false"] :is(.downloadTrack span, .wave i) { animation-play-state: paused; }
+.features { display: grid; gap: 28px; padding-block: 56px; border-top: 1px solid var(--landing-rule); scroll-margin-top: 24px; }
+.featureIntro h2, .closing h2 { font-size: clamp(25px, 3vw, 36px); line-height: 1.7; font-weight: 750; }
+.featureIntro p { color: var(--landing-muted); margin-top: 20px; max-width: 36ch; }
+.featureList article { display: flex; gap: 20px; padding-block: 24px; border-bottom: 1px solid var(--landing-rule); }
+.featureList article:first-child { padding-top: 0; }
+.featureList article:last-child { border: 0; }
+.featureList svg { color: var(--landing-accent); flex: none; margin-top: 6px; }
+.featureList h3 { margin: 0 0 8px; font-size: 17px; font-weight: 700; }
+.featureList p { color: var(--landing-muted); font-size: 14px; }
+.questions { max-width: 760px; padding-block: 40px 56px; }
+.questions h2 { font-size: 25px; font-weight: 750; margin-bottom: 24px; }
+.questions details { border-bottom: 1px solid var(--landing-rule); }
+.questions summary { cursor: pointer; padding-block: 20px; font-size: 14px; font-weight: 600; }
+.questions details p { color: var(--landing-muted); font-size: 14px; padding-bottom: 20px; }
+.closing { text-align: center; padding-block: 48px 72px; }
+.closing .primary { margin-top: 28px; }
+.footer { border-top: 1px solid var(--landing-rule); display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-block: 28px; }
+.footer .brand { font-size: 19px; }
+.footer p { font-size: 12px; color: var(--landing-muted); margin-top: 8px; }
+.footer > a { font-size: 12px; color: var(--landing-muted); white-space: nowrap; min-height: 44px; display: inline-flex; align-items: center; }
+@keyframes scene-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes download-progress { 0% { transform: scaleX(0.08); } 75%, 100% { transform: scaleX(1); } }
+@keyframes waveform { from { transform: scaleY(0.35); } to { transform: scaleY(1); } }
+@media (min-width: 700px) { .demo { padding: 28px; } .steps button { font-size: 14px; } .demoCaption { min-height: 130px; } .features { grid-template-columns: 0.9fr 1.1fr; gap: 64px; padding-block: 80px; } }
+@media (min-width: 1000px) { .hero { grid-template-columns: 1fr 1fr; gap: 72px; padding-block: 56px 96px; } .intro h1 { font-size: 44px; } .demo { max-width: 510px; width: 100%; justify-self: end; } }
+@media (prefers-reduced-motion: reduce) { :global(html):has(.landing) { scroll-behavior: auto; } .landing *, .landing *::before, .landing *::after { animation: none !important; transition: none !important; } .downloadTrack span { transform: scaleX(0.7); } }

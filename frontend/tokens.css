@@ -1,0 +1,18 @@
+/* Shared landing tokens; the existing application keeps its established styles. */
+:root {
+  --landing-paper: #f8f7f0;
+  --landing-surface: #fffef9;
+  --landing-ink: #30352a;
+  --landing-muted: #666d5b;
+  --landing-accent: #68784d;
+  --landing-accent-dark: #4e5e36;
+  --landing-soft: #ebeee1;
+  --landing-rule: #dce0d1;
+  --landing-sky: #e4e9d9;
+  --landing-sun: #f3ebcb;
+  --landing-hill-back: #b5c0a0;
+  --landing-hill-front: #879a70;
+  --landing-font: Vazirmatn, sans-serif;
+  --landing-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --landing-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}

@@ -3,8 +3,8 @@ import { faIR } from "@clerk/localizations";
 import type { Metadata } from "next";
 import "./globals.css";
 export const metadata: Metadata = {
-  title: "حال‌خوب — آرشیو لحظه‌های خوب",
-  description: "آرشیو شخصی ویدیوها، برای حسی که امروز می‌خواهی.",
+  title: "حال‌خوب — دانلود و آرشیو شخصی ویدیوها",
+  description: "دانلود ویدیوهای یوتیوب و اینستاگرام، دسته‌بندی در آرشیو شخصی و پخش ویدیویی یا صوتی.",
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "16x16 32x32 48x48" },
